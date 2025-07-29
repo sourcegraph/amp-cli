@@ -1,6 +1,6 @@
 # Maintainer: Sourcegraph <support@sourcegraph.com>
 
-pkgname=amp-bin
+pkgname=sourcegraph-amp
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="AI-powered coding assistant CLI tool (binary)"
@@ -19,12 +19,12 @@ sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256')
 
 package() {
     install -Dm755 "${srcdir}/amp" "${pkgdir}/usr/bin/amp"
-    
+
     # Install license if available
     if [[ -f "${srcdir}/LICENSE" ]]; then
         install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
     fi
-    
+
     # Install documentation if available
     if [[ -f "${srcdir}/README.md" ]]; then
         install -Dm644 "${srcdir}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"

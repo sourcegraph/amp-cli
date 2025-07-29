@@ -59,14 +59,14 @@ choco install amp
 #### AUR
 ```bash
 # Using yay
-yay -S amp-bin
+yay -S sourcegraph-amp
 
 # Using paru
-paru -S amp-bin
+paru -S sourcegraph-amp
 
 # Manual AUR installation
-git clone https://aur.archlinux.org/amp-bin.git
-cd amp-bin
+git clone https://aur.archlinux.org/sourcegraph-amp.git
+cd sourcegraph-amp
 makepkg -si
 ```
 

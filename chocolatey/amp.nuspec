@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>amp</id>
+    <version>1.0.0</version>
+    <packageSourceUrl>https://github.com/sourcegraph/amp-cli/tree/main/chocolatey</packageSourceUrl>
+    <owners>Sourcegraph</owners>
+    <title>Amp CLI</title>
+    <authors>Sourcegraph</authors>
+    <projectUrl>https://github.com/sourcegraph/amp-cli</projectUrl>
+    <iconUrl>https://avatars.githubusercontent.com/u/3979584?s=200&amp;v=4</iconUrl>
+    <copyright>2024 Sourcegraph</copyright>
+    <licenseUrl>https://github.com/sourcegraph/amp-cli/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/sourcegraph/amp-cli</projectSourceUrl>
+    <docsUrl>https://github.com/sourcegraph/amp-cli/blob/main/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/sourcegraph/amp-cli/issues</bugTrackerUrl>
+    <tags>ai cli coding development assistant productivity</tags>
+    <summary>AI-powered coding assistant CLI tool</summary>
+    <description><![CDATA[Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
+It provides intelligent code suggestions, error detection, and automated refactoring capabilities.
+
+## Features
+
+- AI-powered code suggestions
+- Error detection and fixing
+- Automated refactoring
+- Cross-platform support
+- Easy command-line interface
+
+## Usage
+
+After installation, use `amp --help` to see available commands.
+]]></description>
+    <releaseNotes>https://github.com/sourcegraph/amp-cli/releases/tag/v1.0.0</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

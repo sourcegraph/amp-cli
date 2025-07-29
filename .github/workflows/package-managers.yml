@@ -1,0 +1,102 @@
+name: Update Package Managers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  update-winget:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update winget manifests
+        run: |
+          $version = "${{ github.event.release.tag_name || github.event.inputs.version }}"
+          $version = $version -replace '^v', ''
+          
+          # Update version in manifests
+          (Get-Content winget/Sourcegraph.Amp.yaml) -replace 'PackageVersion: .*', "PackageVersion: $version" | Set-Content winget/Sourcegraph.Amp.yaml
+          (Get-Content winget/Sourcegraph.Amp.installer.yaml) -replace 'PackageVersion: .*', "PackageVersion: $version" | Set-Content winget/Sourcegraph.Amp.installer.yaml
+          (Get-Content winget/Sourcegraph.Amp.locale.en-US.yaml) -replace 'PackageVersion: .*', "PackageVersion: $version" | Set-Content winget/Sourcegraph.Amp.locale.en-US.yaml
+          
+          # Update download URLs
+          (Get-Content winget/Sourcegraph.Amp.installer.yaml) -replace 'v[0-9]+\.[0-9]+\.[0-9]+', "v$version" | Set-Content winget/Sourcegraph.Amp.installer.yaml
+
+      - name: Create PR to winget-pkgs
+        run: |
+          # This would typically fork winget-pkgs repo and create a PR
+          # For now, just output the files that need to be submitted
+          echo "Manual step: Submit these manifests to https://github.com/microsoft/winget-pkgs"
+          echo "Location: manifests/s/Sourcegraph/Amp/${{ github.event.release.tag_name || github.event.inputs.version }}/"
+
+  update-chocolatey:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+      - name: Update chocolatey package
+        run: |
+          $version = "${{ github.event.release.tag_name || github.event.inputs.version }}"
+          $version = $version -replace '^v', ''
+          
+          # Update version in nuspec
+          (Get-Content chocolatey/amp.nuspec) -replace '<version>.*</version>', "<version>$version</version>" | Set-Content chocolatey/amp.nuspec
+          
+          # Update download URL in install script
+          (Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace 'v[0-9]+\.[0-9]+\.[0-9]+', "v$version" | Set-Content chocolatey/tools/chocolateyinstall.ps1
+
+      - name: Build chocolatey package
+        run: |
+          cd chocolatey
+          choco pack
+          
+      - name: Test chocolatey package
+        run: |
+          cd chocolatey
+          choco install amp -s . -f -y
+          amp --version
+          choco uninstall amp -y
+
+      # Note: Actual publishing would require API key
+      # - name: Publish to Chocolatey
+      #   run: |
+      #     cd chocolatey
+      #     choco push amp.${{ github.event.release.tag_name || github.event.inputs.version }}.nupkg -s https://push.chocolatey.org/ -k ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  update-homebrew:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Homebrew formula
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          version="${version#v}"
+          
+          # Update version and URLs in formula
+          sed -i '' "s/version \".*\"/version \"$version\"/" Formula/amp.rb
+          sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" Formula/amp.rb
+
+      - name: Commit updated formula
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Formula/amp.rb
+          git commit -m "Update Homebrew formula to ${{ github.event.release.tag_name || github.event.inputs.version }}" || exit 0
+          git push

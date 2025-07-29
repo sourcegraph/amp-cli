@@ -26,6 +26,18 @@ nix profile install github:sourcegraph/amp-cli
 # Or add to your flake inputs
 ```
 
+### Windows
+
+#### Winget
+```powershell
+winget install Sourcegraph.Amp
+```
+
+#### Chocolatey
+```powershell
+choco install amp
+```
+
 ### Manual Installation
 
 Download the latest release from the [releases page](https://github.com/sourcegraph/amp-cli/releases).

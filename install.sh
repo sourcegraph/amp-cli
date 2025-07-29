@@ -126,9 +126,38 @@ install_aur() {
     fi
 }
 
-# Install .deb package (Debian/Ubuntu)
+# Setup apt repository and install (Debian/Ubuntu)
 install_deb() {
-    print_status "Installing via .deb package..."
+    print_status "Setting up apt repository and installing..."
+    
+    # Add repository key
+    print_status "Adding repository GPG key..."
+    if command_exists curl; then
+        curl -fsSL https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+    elif command_exists wget; then
+        wget -qO- https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+    else
+        print_error "Neither curl nor wget found. Cannot download GPG key."
+        return 1
+    fi
+    
+    # Add repository source
+    print_status "Adding apt repository..."
+    echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://github.com/sourcegraph/amp-cli/releases/download/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
+    
+    # Update package list and install
+    print_status "Updating package list..."
+    sudo apt update
+    
+    print_status "Installing amp..."
+    sudo apt install -y amp
+    
+    return 0
+}
+
+# Fallback: Install .deb package directly
+install_deb_direct() {
+    print_status "Installing via direct .deb package download..."
     
     local deb_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp_${VERSION}-1_${ARCH}.deb"
     local deb_file="/tmp/amp_${VERSION}-1_${ARCH}.deb"
@@ -155,9 +184,42 @@ install_deb() {
     return 0
 }
 
-# Install .rpm package (RHEL/CentOS/Fedora)
+# Setup yum/dnf repository and install (RHEL/CentOS/Fedora)
 install_rpm() {
-    print_status "Installing via .rpm package..."
+    print_status "Setting up yum/dnf repository and installing..."
+    
+    # Add repository GPG key
+    print_status "Adding repository GPG key..."
+    sudo rpm --import https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc
+    
+    # Add repository configuration
+    print_status "Adding yum/dnf repository..."
+    sudo tee /etc/yum.repos.d/amp-cli.repo > /dev/null <<EOF
+[amp-cli]
+name=Amp CLI Repository
+baseurl=https://github.com/sourcegraph/amp-cli/releases/download/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc
+EOF
+    
+    # Install package
+    print_status "Installing amp..."
+    if command_exists dnf; then
+        sudo dnf install -y amp
+    elif command_exists yum; then
+        sudo yum install -y amp
+    else
+        print_error "No package manager found (dnf/yum)."
+        return 1
+    fi
+    
+    return 0
+}
+
+# Fallback: Install .rpm package directly
+install_rpm_direct() {
+    print_status "Installing via direct .rpm package download..."
     
     local rpm_arch
     if [[ "$ARCH" == "amd64" ]]; then
@@ -327,6 +389,8 @@ main() {
                 ;;
             ubuntu|debian|pop|elementary)
                 if install_deb; then
+                    print_success "Successfully installed Amp via apt repository!"
+                elif install_deb_direct; then
                     print_success "Successfully installed Amp via .deb package!"
                 elif install_nix; then
                     print_success "Successfully installed Amp via Nix!"
@@ -341,6 +405,8 @@ main() {
                 ;;
             fedora|rhel|centos|rocky|almalinux)
                 if install_rpm; then
+                    print_success "Successfully installed Amp via yum/dnf repository!"
+                elif install_rpm_direct; then
                     print_success "Successfully installed Amp via .rpm package!"
                 elif install_nix; then
                     print_success "Successfully installed Amp via Nix!"

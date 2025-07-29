@@ -268,3 +268,95 @@ jobs:
         with:
           name: amp-${{ matrix.arch }}.rpm
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm
+
+  build-repositories:
+    runs-on: ubuntu-latest
+    needs: [build-deb, build-rpm]
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GPG
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import --batch
+          echo "GPG_KEY_ID=${{ secrets.GPG_KEY_ID }}" >> $GITHUB_ENV
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y createrepo-c dpkg-dev
+
+      - name: Prepare package directories
+        run: |
+          mkdir -p debs rpms
+          find artifacts -name "*.deb" -exec cp {} debs/ \;
+          find artifacts -name "*.rpm" -exec cp {} rpms/ \;
+
+      - name: Build Debian repository
+        run: |
+          chmod +x scripts/build-debian-repo.sh
+          ./scripts/build-debian-repo.sh debs repository/debian
+
+      - name: Build RPM repository
+        run: |
+          chmod +x scripts/build-rpm-repo.sh
+          ./scripts/build-rpm-repo.sh rpms repository/rpm
+
+      - name: Create release assets
+        run: |
+          # Create repository archives
+          tar -czf debian-repo.tar.gz -C repository debian
+          tar -czf rpm-repo.tar.gz -C repository rpm
+          
+          # Copy GPG key to release location
+          mkdir -p release-assets/gpg
+          cp repository/gpg/amp-cli.asc release-assets/gpg/ || echo "GPG key not found, will be created manually"
+
+      - name: Upload repositories to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            debian-repo.tar.gz
+            rpm-repo.tar.gz
+            release-assets/gpg/amp-cli.asc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to GitHub Pages (repositories)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Copy repository files to a GitHub Pages compatible structure
+          mkdir -p gh-pages
+          cp -r repository/* gh-pages/
+          
+          # Create index.html for repository listing
+          cat > gh-pages/index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Amp CLI Package Repositories</title>
+          </head>
+          <body>
+              <h1>Amp CLI Package Repositories</h1>
+              <ul>
+                  <li><a href="debian/">Debian/Ubuntu Repository</a></li>
+                  <li><a href="rpm/">RHEL/Fedora Repository</a></li>
+                  <li><a href="gpg/">GPG Keys</a></li>
+              </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages
+          destination_dir: releases/download

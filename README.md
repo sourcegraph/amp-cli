@@ -54,6 +54,28 @@ cd amp-bin
 makepkg -si
 ```
 
+### Debian/Ubuntu
+
+#### .deb Package
+```bash
+# Download and install .deb package
+wget https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp_1.0.0-1_amd64.deb
+sudo dpkg -i amp_1.0.0-1_amd64.deb
+sudo apt-get install -f  # Fix dependencies if needed
+```
+
+### RHEL/CentOS/Fedora
+
+#### .rpm Package
+```bash
+# Download and install .rpm package
+wget https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-1.0.0-1.x86_64.rpm
+sudo rpm -ivh amp-1.0.0-1.x86_64.rpm
+
+# Or with dnf/yum (handles dependencies better)
+sudo dnf install https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-1.0.0-1.x86_64.rpm
+```
+
 ### Manual Installation
 
 Download the latest release from the [releases page](https://github.com/sourcegraph/amp-cli/releases).

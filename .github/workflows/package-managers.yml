@@ -100,3 +100,71 @@ jobs:
           git add Formula/amp.rb
           git commit -m "Update Homebrew formula to ${{ github.event.release.tag_name || github.event.inputs.version }}" || exit 0
           git push
+
+  update-nix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update Nix flake
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          version="${version#v}"
+          
+          # Update version in flake.nix
+          sed -i "s/version = \".*\";/version = \"$version\";/" flake.nix
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" flake.nix
+
+      - name: Test Nix flake
+        run: |
+          nix flake check
+          nix build .#amp
+
+      - name: Commit updated flake
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add flake.nix
+          git commit -m "Update Nix flake to ${{ github.event.release.tag_name || github.event.inputs.version }}" || exit 0
+          git push
+
+  update-aur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update AUR PKGBUILD
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          version="${version#v}"
+          
+          # Update version in PKGBUILD
+          sed -i "s/pkgver=.*/pkgver=$version/" aur/amp-bin/PKGBUILD
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" aur/amp-bin/PKGBUILD
+          
+          # Update .SRCINFO (this would normally be done with makepkg --printsrcinfo)
+          sed -i "s/pkgver = .*/pkgver = $version/" aur/amp-bin/.SRCINFO
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" aur/amp-bin/.SRCINFO
+
+      - name: Commit AUR updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add aur/amp-bin/
+          git commit -m "Update AUR package to ${{ github.event.release.tag_name || github.event.inputs.version }}" || exit 0
+          git push
+
+      - name: Output AUR submission instructions
+        run: |
+          echo "Manual step: Update AUR package at https://aur.archlinux.org/amp-bin.git"
+          echo "1. Clone the AUR repository: git clone ssh://aur@aur.archlinux.org/amp-bin.git"
+          echo "2. Copy updated PKGBUILD and .SRCINFO files"
+          echo "3. Update checksums with actual SHA256 values"
+          echo "4. Commit and push to AUR"

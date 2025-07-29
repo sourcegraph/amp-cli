@@ -4,7 +4,17 @@ AI-powered coding assistant CLI tool.
 
 ## Installation
 
-### Homebrew
+### Quick Install (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.sh | bash
+```
+
+This script automatically detects your OS and installs amp using the best available method.
+
+### Manual Installation by Platform
+
+#### Homebrew
 
 ```bash
 # Add the tap

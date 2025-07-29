@@ -1,0 +1,16 @@
+pkgbase = amp-bin
+	pkgdesc = AI-powered coding assistant CLI tool (binary)
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/sourcegraph/amp-cli
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	provides = amp
+	conflicts = amp
+	source_x86_64 = amp-bin-1.0.0-x86_64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-linux-amd64.tar.gz
+	source_aarch64 = amp-bin-1.0.0-aarch64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-linux-arm64.tar.gz
+	sha256sums_x86_64 = REPLACE_WITH_LINUX_AMD64_SHA256
+	sha256sums_aarch64 = REPLACE_WITH_LINUX_ARM64_SHA256
+
+pkgname = amp-bin

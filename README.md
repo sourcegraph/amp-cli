@@ -38,6 +38,22 @@ winget install Sourcegraph.Amp
 choco install amp
 ```
 
+### Arch Linux
+
+#### AUR
+```bash
+# Using yay
+yay -S amp-bin
+
+# Using paru
+paru -S amp-bin
+
+# Manual AUR installation
+git clone https://aur.archlinux.org/amp-bin.git
+cd amp-bin
+makepkg -si
+```
+
 ### Manual Installation
 
 Download the latest release from the [releases page](https://github.com/sourcegraph/amp-cli/releases).

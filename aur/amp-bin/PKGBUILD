@@ -1,0 +1,31 @@
+# Maintainer: Sourcegraph <support@sourcegraph.com>
+
+pkgname=amp-bin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="AI-powered coding assistant CLI tool (binary)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/sourcegraph/amp-cli"
+license=('MIT')
+provides=('amp')
+conflicts=('amp')
+
+source_x86_64=("${pkgname}-${pkgver}-x86_64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-amd64.tar.gz")
+source_aarch64=("${pkgname}-${pkgver}-aarch64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-arm64.tar.gz")
+
+sha256sums_x86_64=('REPLACE_WITH_LINUX_AMD64_SHA256')
+sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256')
+
+package() {
+    install -Dm755 "${srcdir}/amp" "${pkgdir}/usr/bin/amp"
+    
+    # Install license if available
+    if [[ -f "${srcdir}/LICENSE" ]]; then
+        install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    fi
+    
+    # Install documentation if available
+    if [[ -f "${srcdir}/README.md" ]]; then
+        install -Dm644 "${srcdir}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+    fi
+}

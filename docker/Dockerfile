@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     ca-certificates \
+    ripgrep \
     && rm -rf /var/lib/apt/lists/*
 
 # Install amp using the official install script

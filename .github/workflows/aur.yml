@@ -4,6 +4,8 @@ name: Update AUR Package
 "on":
   release:
     types: [published]
+  repository_dispatch:
+    types: [release-orchestrator]
   workflow_dispatch:
     inputs:
       version:
@@ -37,7 +39,8 @@ jobs:
         id: checksums
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version ||
+            github.event.client_payload.version }}"
           version="${version#v}"
 
           # Download release files to calculate checksums
@@ -59,7 +62,8 @@ jobs:
       - name: Clone and update AUR package
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version ||
+            github.event.client_payload.version }}"
           version="${version#v}"
 
           # Clone AUR repository
@@ -98,7 +102,8 @@ jobs:
       - name: Update local AUR files
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version ||
+            github.event.client_payload.version }}"
           version="${version#v}"
 
           # Copy updated files back to our repository

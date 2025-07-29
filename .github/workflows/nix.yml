@@ -10,6 +10,8 @@ name: Nix Package
         description: 'Version to update (e.g., 1.0.0)'
         required: true
         type: string
+  repository_dispatch:
+    types: [release-orchestrator]
 
 jobs:
   update-nix:
@@ -26,7 +28,7 @@ jobs:
       - name: Update Nix flake
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
           # Update version in flake.nix
@@ -45,5 +47,5 @@ jobs:
           git add flake.nix
           git commit -m "Update Nix flake to ${{
             github.event.release.tag_name ||
-            github.event.inputs.version }}" || exit 0
+            github.event.inputs.version || github.event.client_payload.version }}" || exit 0
           git push

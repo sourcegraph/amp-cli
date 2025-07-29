@@ -10,11 +10,15 @@ name: Build Package Repositories
         description: 'Version to update (e.g., 1.0.0)'
         required: true
         type: string
+  repository_dispatch:
+    types: [release-orchestrator]
 
 jobs:
   build-repositories:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

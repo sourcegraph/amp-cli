@@ -10,6 +10,8 @@ name: Homebrew Package
         description: 'Version to update (e.g., 1.0.0)'
         required: true
         type: string
+  repository_dispatch:
+    types: [release-orchestrator]
 
 jobs:
   update-homebrew:
@@ -21,7 +23,7 @@ jobs:
       - name: Update Homebrew formula
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
           # Update version and URLs in formula
@@ -35,5 +37,5 @@ jobs:
           git add Formula/amp.rb
           git commit -m "Update Homebrew formula to ${{
             github.event.release.tag_name ||
-            github.event.inputs.version }}" || exit 0
+            github.event.inputs.version || github.event.client_payload.version }}" || exit 0
           git push

@@ -10,6 +10,8 @@ name: Build Debian Packages
         description: 'Version to update (e.g., 1.0.0)'
         required: true
         type: string
+  repository_dispatch:
+    types: [release-orchestrator]
 
 jobs:
   build-deb:
@@ -31,7 +33,7 @@ jobs:
       - name: Download release binary
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
           if [ "${{ matrix.arch }}" = "amd64" ]; then
@@ -46,7 +48,7 @@ jobs:
       - name: Build .deb package
         run: |
           version="${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
           # Update changelog version

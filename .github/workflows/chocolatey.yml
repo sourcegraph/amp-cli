@@ -10,6 +10,8 @@ name: Chocolatey Package
         description: 'Version to update (e.g., 1.0.0)'
         required: true
         type: string
+  repository_dispatch:
+    types: [release-orchestrator]
 
 jobs:
   update-chocolatey:
@@ -30,7 +32,7 @@ jobs:
       - name: Update chocolatey package
         run: |
           $version = "${{ github.event.release.tag_name ||
-            github.event.inputs.version }}"
+            github.event.inputs.version || github.event.client_payload.version }}"
           $version = $version -replace '^v', ''
 
           # Update version in nuspec

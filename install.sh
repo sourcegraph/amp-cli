@@ -295,7 +295,8 @@ install_manual() {
     fi
 
     print_status "Downloading $binary_url..."
-    local tmpdir=$(mktemp -d)
+    local tmpdir
+    tmpdir=$(mktemp -d)
     local archive_file="$tmpdir/amp.tar.gz"
 
     if command_exists curl; then
@@ -321,8 +322,8 @@ install_manual() {
         # Add to PATH if not already there
         if [[ ":$PATH:" != *":$install_dir:"* ]]; then
             print_warning "Adding $install_dir to PATH in your shell profile"
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.bashrc"
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.zshrc" 2>/dev/null || true
+            echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >>"$HOME/.bashrc"
+            echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >>"$HOME/.zshrc" 2>/dev/null || true
         fi
     fi
 
@@ -334,6 +335,7 @@ install_manual() {
 # Detect Linux distribution
 detect_linux_distro() {
     if [[ -f /etc/os-release ]]; then
+        # shellcheck source=/dev/null
         . /etc/os-release
         echo "$ID"
     elif [[ -f /etc/debian_version ]]; then

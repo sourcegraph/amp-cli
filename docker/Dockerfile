@@ -15,11 +15,11 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.sh | bash
 
 # Create a non-root user
-RUN useradd -m -s /bin/bash ampuser
+RUN useradd -m -s /bin/bash amp
 
 # Switch to non-root user
-USER ampuser
-WORKDIR /home/ampuser
+USER amp
+WORKDIR /home/amp
 
 # Verify installation
 RUN amp --help

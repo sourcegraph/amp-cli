@@ -203,6 +203,37 @@
         description = "Validate Chocolatey nuspec files";
       };
 
+      # Docker hooks
+      validate-dockerfile = {
+        enable = true;
+        files = "Dockerfile$";
+        entry = "${pkgs.writeShellScript "validate-dockerfile" ''
+          set -e
+          echo "Validating Dockerfile: $1"
+
+          # Check if docker is available for syntax validation
+          if command -v docker >/dev/null 2>&1; then
+            # Validate Dockerfile syntax
+            docker build --dry-run -f "$1" . >/dev/null 2>&1 || {
+              echo "Error: Invalid Dockerfile syntax in $1"
+              exit 1
+            }
+          else
+            echo "Warning: Docker not available, skipping syntax validation"
+          fi
+
+          # Basic Dockerfile checks
+          if ! grep -q "FROM" "$1"; then
+            echo "Error: No FROM instruction found in $1"
+            exit 1
+          fi
+
+          echo "Dockerfile validation passed: $1"
+        ''}";
+        language = "system";
+        description = "Validate Dockerfile syntax and best practices";
+      };
+
       # Generic file checks
       end-of-file-fixer.enable = true;
       trailing-whitespace = {
@@ -253,8 +284,25 @@
 
       # Validate GitHub Actions
       if [ -d ".github/workflows" ]; then
-        echo "Checking GitHub Actions workflows..."
-        yamllint .github/workflows/*.yml
+      echo "Checking GitHub Actions workflows..."
+      yamllint .github/workflows/*.yml
+      fi
+
+      # Validate Docker files
+      if [ -d "docker" ]; then
+        echo "Checking Docker files..."
+        if [ -f "docker/Dockerfile" ]; then
+          echo "Validating Dockerfile..."
+          if command -v docker >/dev/null 2>&1; then
+            docker build --dry-run -f docker/Dockerfile . >/dev/null 2>&1 || {
+              echo "Error: Invalid Dockerfile syntax"
+              exit 1
+            }
+            echo "Dockerfile validation passed"
+          else
+            echo "Warning: Docker not available, skipping syntax validation"
+          fi
+        fi
       fi
 
       echo "Package validation complete!"
@@ -284,7 +332,7 @@
     hello
     echo "Package manager development environment ready!"
     echo "Available scripts:"
-    echo "  - validate-all-packages: Validate all package configurations"
+    echo "  - validate-all-packages: Validate all package configurations (including Docker)"
     echo "  - build-test-packages: Test package building"
     echo ""
     echo "Pre-commit hooks configured for:"

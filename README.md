@@ -6,11 +6,17 @@ AI-powered coding assistant CLI tool.
 
 ### Quick Install (Recommended)
 
+**Linux/macOS:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.sh | bash
 ```
 
-This script automatically detects your OS and installs amp using the best available method.
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.ps1 | iex
+```
+
+These scripts automatically detect your OS and install amp using the best available method.
 
 ### Manual Installation by Platform
 

@@ -1,0 +1,52 @@
+---
+name: Winget Package
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  update-winget:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update winget manifests
+        run: |
+          $version = "${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          $version = $version -replace '^v', ''
+
+          # Update version in manifests
+          (Get-Content winget/Sourcegraph.Amp.yaml) -replace
+            'PackageVersion: .*', "PackageVersion: $version" |
+            Set-Content winget/Sourcegraph.Amp.yaml
+          (Get-Content winget/Sourcegraph.Amp.installer.yaml) -replace
+            'PackageVersion: .*', "PackageVersion: $version" |
+            Set-Content winget/Sourcegraph.Amp.installer.yaml
+          (Get-Content winget/Sourcegraph.Amp.locale.en-US.yaml) -replace
+            'PackageVersion: .*', "PackageVersion: $version" |
+            Set-Content winget/Sourcegraph.Amp.locale.en-US.yaml
+
+          # Update download URLs
+          (Get-Content winget/Sourcegraph.Amp.installer.yaml) -replace
+            'v[0-9]+\.[0-9]+\.[0-9]+', "v$version" |
+            Set-Content winget/Sourcegraph.Amp.installer.yaml
+
+      - name: Create PR to winget-pkgs
+        run: |
+          # This would typically fork winget-pkgs repo and create a PR
+          # For now, just output the files that need to be submitted
+          echo "Manual step: Submit these manifests to
+            https://github.com/microsoft/winget-pkgs"
+          echo "Location:
+            manifests/s/Sourcegraph/Amp/${{
+            github.event.release.tag_name ||
+            github.event.inputs.version }}/"

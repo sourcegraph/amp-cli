@@ -1,0 +1,39 @@
+---
+name: Homebrew Package
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  update-homebrew:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Homebrew formula
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          # Update version and URLs in formula
+          sed -i '' "s/version \".*\"/version \"$version\"/" Formula/amp.rb
+          sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" Formula/amp.rb
+
+      - name: Commit updated formula
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add Formula/amp.rb
+          git commit -m "Update Homebrew formula to ${{
+            github.event.release.tag_name ||
+            github.event.inputs.version }}" || exit 0
+          git push

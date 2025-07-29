@@ -1,0 +1,66 @@
+---
+name: Build Debian Packages
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up architecture
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
+
+      - name: Download release binary
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            arch_name="amd64"
+          else
+            arch_name="arm64"
+          fi
+
+          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-${arch_name}.tar.gz"
+          tar -xzf "amp-linux-${arch_name}.tar.gz"
+
+      - name: Build .deb package
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          # Update changelog version
+          sed -i "s/amp (.*)/amp (${version}-1)/" debian/changelog
+
+          # Install build dependencies
+          sudo apt-get update
+          sudo apt-get install -y debhelper build-essential
+
+          # Build package
+          dpkg-buildpackage -us -uc -b --host-arch=${{ matrix.arch }}
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amp-${{ matrix.arch }}.deb
+          path: ../amp_*.deb

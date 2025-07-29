@@ -1,0 +1,49 @@
+---
+name: Nix Package
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  update-nix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Update Nix flake
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          # Update version in flake.nix
+          sed -i "s/version = \".*\";/version = \"$version\";/" flake.nix
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" flake.nix
+
+      - name: Test Nix flake
+        run: |
+          nix flake check
+          nix build .#amp
+
+      - name: Commit updated flake
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add flake.nix
+          git commit -m "Update Nix flake to ${{
+            github.event.release.tag_name ||
+            github.event.inputs.version }}" || exit 0
+          git push

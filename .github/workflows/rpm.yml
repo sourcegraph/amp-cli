@@ -1,0 +1,64 @@
+---
+name: Build RPM Packages
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RPM build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm build-essential
+
+      - name: Download release binary
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            arch_name="amd64"
+          else
+            arch_name="arm64"
+          fi
+
+          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-${arch_name}.tar.gz"
+
+      - name: Build .rpm package
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          version="${version#v}"
+
+          # Update spec version
+          sed -i "s/Version:.*/Version: ${version}/" rpm/amp.spec
+
+          # Set up RPM build environment
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
+          cp amp-linux-*.tar.gz ~/rpmbuild/SOURCES/
+          cp rpm/amp.spec ~/rpmbuild/SPECS/
+
+          # Build RPM
+          rpmbuild --target ${{ matrix.arch }} -bb ~/rpmbuild/SPECS/amp.spec
+
+      - name: Upload .rpm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amp-${{ matrix.arch }}.rpm
+          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm

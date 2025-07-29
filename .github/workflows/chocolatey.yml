@@ -1,0 +1,65 @@
+---
+name: Chocolatey Package
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  update-chocolatey:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol =
+            [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object
+            System.Net.WebClient).DownloadString(
+            'https://community.chocolatey.org/install.ps1'))
+
+      - name: Update chocolatey package
+        run: |
+          $version = "${{ github.event.release.tag_name ||
+            github.event.inputs.version }}"
+          $version = $version -replace '^v', ''
+
+          # Update version in nuspec
+          (Get-Content chocolatey/amp.nuspec) -replace
+            '<version>.*</version>', "<version>$version</version>" |
+            Set-Content chocolatey/amp.nuspec
+
+          # Update download URL in install script
+          (Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace
+            'v[0-9]+\.[0-9]+\.[0-9]+', "v$version" |
+            Set-Content chocolatey/tools/chocolateyinstall.ps1
+
+      - name: Build chocolatey package
+        run: |
+          cd chocolatey
+          choco pack
+
+      - name: Test chocolatey package
+        run: |
+          cd chocolatey
+          choco install amp -s . -f -y
+          amp --version
+          choco uninstall amp -y
+
+      # Note: Actual publishing would require API key
+      # - name: Publish to Chocolatey
+      #   run: |
+      #     cd chocolatey
+      #     choco push amp.${{ github.event.release.tag_name ||
+      #       github.event.inputs.version }}.nupkg
+      #       -s https://push.chocolatey.org/
+      #       -k ${{ secrets.CHOCOLATEY_API_KEY }}

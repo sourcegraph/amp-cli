@@ -16,6 +16,9 @@ Commands:
 - amp
 FileExtensions:
 - amp
+Dependencies:
+  PackageDependencies:
+  - PackageIdentifier: BurntSushi.ripgrep.MSVC
 ReleaseDate: 2024-01-01
 Installers:
 - Architecture: x64

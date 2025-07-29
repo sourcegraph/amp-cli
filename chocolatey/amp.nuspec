@@ -16,6 +16,9 @@
     <docsUrl>https://github.com/sourcegraph/amp-cli/blob/main/README.md</docsUrl>
     <bugTrackerUrl>https://github.com/sourcegraph/amp-cli/issues</bugTrackerUrl>
     <tags>ai cli coding development assistant productivity</tags>
+    <dependencies>
+      <dependency id="ripgrep" version="14.0.0" />
+    </dependencies>
     <summary>AI-powered coding assistant CLI tool</summary>
     <description><![CDATA[Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
 It provides intelligent code suggestions, error detection, and automated refactoring capabilities.

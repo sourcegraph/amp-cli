@@ -41,6 +41,8 @@
             sha256 = shaMap.${arch};
           };
 
+          buildInputs = [ pkgs.ripgrep ];
+          
           dontBuild = true;
           dontConfigure = true;
 
@@ -51,8 +53,14 @@
             cp amp $out/bin/
             chmod +x $out/bin/amp
             
+            # Create wrapper to ensure ripgrep is in PATH
+            wrapProgram $out/bin/amp \
+              --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ripgrep ]}
+            
             runHook postInstall
           '';
+
+          nativeBuildInputs = [ pkgs.makeWrapper ];
 
           meta = with pkgs.lib; {
             description = "AI-powered coding assistant CLI tool";

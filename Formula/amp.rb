@@ -25,6 +25,8 @@ class Amp < Formula
     end
   end
 
+  depends_on "ripgrep"
+
   def install
     bin.install "amp"
   end

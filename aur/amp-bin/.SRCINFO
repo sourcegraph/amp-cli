@@ -6,6 +6,7 @@ pkgbase = amp-bin
 	arch = x86_64
 	arch = aarch64
 	license = MIT
+	depends = ripgrep
 	provides = amp
 	conflicts = amp
 	source_x86_64 = amp-bin-1.0.0-x86_64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-linux-amd64.tar.gz

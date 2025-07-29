@@ -5,24 +5,25 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = with pkgs; [ 
+  packages = with pkgs; [
     git
     # Package manager tools
-    createrepo_c  # For RPM repositories
-    dpkg          # For Debian packages
+    createrepo_c # For RPM repositories
+    dpkg # For Debian packages
     # Linting and validation tools
-    shellcheck    # Shell script linting
-    shfmt         # Shell script formatting
-    yamllint      # YAML validation
-    rubocop       # Ruby linting (Homebrew formula)
-    nixpkgs-fmt   # Nix formatting
+    shellcheck # Shell script linting
+    shfmt # Shell script formatting
+    yamllint # YAML validation
+    rubocop # Ruby linting (Homebrew formula)
+    nixpkgs-fmt # Nix formatting
+    dos2unix # Line ending conversion
     # PowerShell tools (if available)
-    powershell    # PowerShell Core for script validation
+    powershell # PowerShell Core for script validation
   ];
 
   # https://devenv.sh/languages/
-  languages.ruby.enable = true;  # For Homebrew formula validation
-  languages.nix.enable = true;   # For Nix files
+  languages.ruby.enable = true; # For Homebrew formula validation
+  languages.nix.enable = true; # For Nix files
 
   # https://devenv.sh/git-hooks/
   pre-commit = {
@@ -33,7 +34,7 @@
         files = "\\.(sh|bash)$";
         description = "Lint shell scripts with shellcheck";
       };
-      
+
       shfmt = {
         enable = true;
         files = "\\.(sh|bash)$";
@@ -64,6 +65,7 @@
       rubocop = {
         enable = true;
         files = "\\.rb$";
+        entry = "${pkgs.rubocop}/bin/rubocop";
         description = "Lint Ruby files (Homebrew formula)";
       };
 
@@ -91,28 +93,28 @@
         entry = "${pkgs.writeShellScript "validate-pkgbuild" ''
           set -e
           echo "Validating PKGBUILD: $1"
-          
+
           # Check required fields
           if ! grep -q "^pkgname=" "$1"; then
             echo "Error: Missing pkgname in $1"
             exit 1
           fi
-          
+
           if ! grep -q "^pkgver=" "$1"; then
             echo "Error: Missing pkgver in $1"
             exit 1
           fi
-          
+
           if ! grep -q "^pkgrel=" "$1"; then
             echo "Error: Missing pkgrel in $1"
             exit 1
           fi
-          
+
           # Check for ripgrep dependency
           if ! grep -q "depends.*ripgrep" "$1"; then
             echo "Warning: ripgrep dependency not found in $1"
           fi
-          
+
           echo "PKGBUILD validation passed: $1"
         ''}";
         language = "system";
@@ -125,23 +127,23 @@
         entry = "${pkgs.writeShellScript "validate-debian-control" ''
           set -e
           echo "Validating Debian control file: $1"
-          
+
           # Check required fields
           if ! grep -q "^Package:" "$1"; then
             echo "Error: Missing Package field in $1"
             exit 1
           fi
-          
+
           if ! grep -q "^Architecture:" "$1"; then
             echo "Error: Missing Architecture field in $1"
             exit 1
           fi
-          
+
           # Check for ripgrep dependency
           if ! grep -q "Depends:.*ripgrep" "$1"; then
             echo "Warning: ripgrep dependency not found in $1"
           fi
-          
+
           echo "Debian control validation passed: $1"
         ''}";
         language = "system";
@@ -154,23 +156,23 @@
         entry = "${pkgs.writeShellScript "validate-rpm-spec" ''
           set -e
           echo "Validating RPM spec file: $1"
-          
+
           # Check required fields
           if ! grep -q "^Name:" "$1"; then
             echo "Error: Missing Name field in $1"
             exit 1
           fi
-          
+
           if ! grep -q "^Version:" "$1"; then
             echo "Error: Missing Version field in $1"
             exit 1
           fi
-          
+
           # Check for ripgrep dependency
           if ! grep -q "Requires:.*ripgrep" "$1"; then
             echo "Warning: ripgrep dependency not found in $1"
           fi
-          
+
           echo "RPM spec validation passed: $1"
         ''}";
         language = "system";
@@ -183,18 +185,18 @@
         entry = "${pkgs.writeShellScript "validate-chocolatey-nuspec" ''
           set -e
           echo "Validating Chocolatey nuspec file: $1"
-          
+
           # Check XML syntax
           ${pkgs.libxml2}/bin/xmllint --noout "$1" || {
             echo "Error: Invalid XML in $1"
             exit 1
           }
-          
+
           # Check for ripgrep dependency
           if ! grep -q "ripgrep" "$1"; then
             echo "Warning: ripgrep dependency not found in $1"
           fi
-          
+
           echo "Chocolatey nuspec validation passed: $1"
         ''}";
         language = "system";
@@ -203,12 +205,23 @@
 
       # Generic file checks
       end-of-file-fixer.enable = true;
-      trailing-whitespace.enable = true;
-      mixed-line-ending.enable = true;
-      
+      trailing-whitespace = {
+        enable = true;
+        entry = "${pkgs.python3Packages.pre-commit-hooks}/bin/trailing-whitespace-fixer";
+      };
+      mixed-line-ending = {
+        enable = true;
+        entry = "${pkgs.dos2unix}/bin/dos2unix";
+        args = [ "--keepdate" ];
+      };
+
       # Check for merge conflicts
-      check-merge-conflict.enable = true;
-      
+      check-merge-conflict = {
+        enable = true;
+        entry = "${pkgs.git}/bin/git";
+        args = [ "diff" "--check" ];
+      };
+
       # Prevent large files from being committed
       check-added-large-files = {
         enable = true;
@@ -222,47 +235,47 @@
     hello.exec = ''
       echo hello from $GREET
     '';
-    
+
     validate-all-packages.exec = ''
       echo "Validating all package manager configurations..."
-      
+
       # Validate Homebrew formula
       if [ -f "Formula/amp.rb" ]; then
         echo "Checking Homebrew formula..."
         ruby -c Formula/amp.rb
       fi
-      
+
       # Validate Nix flake
       if [ -f "flake.nix" ]; then
         echo "Checking Nix flake..."
-        nix flake check --no-build
+        nix --extra-experimental-features nix-command flake check --no-build
       fi
-      
+
       # Validate GitHub Actions
       if [ -d ".github/workflows" ]; then
         echo "Checking GitHub Actions workflows..."
         yamllint .github/workflows/*.yml
       fi
-      
+
       echo "Package validation complete!"
     '';
-    
+
     build-test-packages.exec = ''
       echo "Building test packages..."
-      
+
       # Test Debian package build (if tools available)
       if command -v dpkg-buildpackage >/dev/null 2>&1; then
         echo "Testing Debian package build..."
         # This would need actual binary files to work
         echo "Debian build tools available"
       fi
-      
-      # Test RPM build (if tools available) 
+
+      # Test RPM build (if tools available)
       if command -v rpmbuild >/dev/null 2>&1; then
         echo "Testing RPM build..."
         echo "RPM build tools available"
       fi
-      
+
       echo "Test build complete!"
     '';
   };

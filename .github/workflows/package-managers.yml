@@ -140,34 +140,90 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update AUR PKGBUILD
+      - name: Setup SSH for AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+          
+          # Create SSH config for AUR
+          cat > ~/.ssh/config <<EOF
+          Host aur.archlinux.org
+            User aur
+            IdentityFile ~/.ssh/aur
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Calculate release checksums
+        id: checksums
         run: |
           version="${{ github.event.release.tag_name || github.event.inputs.version }}"
           version="${version#v}"
           
-          # Update version in PKGBUILD
-          sed -i "s/pkgver=.*/pkgver=$version/" aur/amp-bin/PKGBUILD
-          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" aur/amp-bin/PKGBUILD
+          # Download release files to calculate checksums
+          curl -fsSL -o amp-linux-amd64.tar.gz "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-amd64.tar.gz"
+          curl -fsSL -o amp-linux-arm64.tar.gz "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-arm64.tar.gz"
           
-          # Update .SRCINFO (this would normally be done with makepkg --printsrcinfo)
-          sed -i "s/pkgver = .*/pkgver = $version/" aur/amp-bin/.SRCINFO
-          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" aur/amp-bin/.SRCINFO
+          # Calculate SHA256 checksums
+          amd64_sha=$(sha256sum amp-linux-amd64.tar.gz | cut -d' ' -f1)
+          arm64_sha=$(sha256sum amp-linux-arm64.tar.gz | cut -d' ' -f1)
+          
+          echo "amd64_sha=$amd64_sha" >> $GITHUB_OUTPUT
+          echo "arm64_sha=$arm64_sha" >> $GITHUB_OUTPUT
+          
+          # Clean up
+          rm amp-linux-*.tar.gz
 
-      - name: Commit AUR updates
+      - name: Clone and update AUR package
         run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          version="${version#v}"
+          
+          # Clone AUR repository
+          git clone ssh://aur@aur.archlinux.org/amp-bin.git aur-repo
+          cd aur-repo
+          
+          # Update PKGBUILD
+          sed -i "s/pkgver=.*/pkgver=$version/" PKGBUILD
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" PKGBUILD
+          sed -i "s/sha256sums_x86_64=.*/sha256sums_x86_64=('${{ steps.checksums.outputs.amd64_sha }}')/" PKGBUILD
+          sed -i "s/sha256sums_aarch64=.*/sha256sums_aarch64=('${{ steps.checksums.outputs.arm64_sha }}')/" PKGBUILD
+          
+          # Generate new .SRCINFO
+          makepkg --printsrcinfo > .SRCINFO
+          
+          # Configure git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Commit and push changes
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version $version
+          
+          - Update pkgver to $version
+          - Update download URLs for new release
+          - Update SHA256 checksums for x86_64 and aarch64
+          
+          Automated update from GitHub Actions"
+          
+          git push origin master
+
+      - name: Update local AUR files
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.version }}"
+          version="${version#v}"
+          
+          # Copy updated files back to our repository
+          cp aur-repo/PKGBUILD aur/amp-bin/PKGBUILD
+          cp aur-repo/.SRCINFO aur/amp-bin/.SRCINFO
+          
+          # Update local repository
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add aur/amp-bin/
-          git commit -m "Update AUR package to ${{ github.event.release.tag_name || github.event.inputs.version }}" || exit 0
+          git commit -m "Update AUR package to $version with checksums" || exit 0
           git push
-
-      - name: Output AUR submission instructions
-        run: |
-          echo "Manual step: Update AUR package at https://aur.archlinux.org/amp-bin.git"
-          echo "1. Clone the AUR repository: git clone ssh://aur@aur.archlinux.org/amp-bin.git"
-          echo "2. Copy updated PKGBUILD and .SRCINFO files"
-          echo "3. Update checksums with actual SHA256 values"
-          echo "4. Commit and push to AUR"
 
   build-deb:
     runs-on: ubuntu-latest

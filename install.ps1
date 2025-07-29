@@ -32,7 +32,7 @@ function Write-Error {
 # Check if command exists
 function Test-Command {
     param([string]$Command)
-    
+
     try {
         Get-Command $Command -ErrorAction Stop | Out-Null
         return $true
@@ -46,7 +46,7 @@ function Test-Command {
 function Get-Architecture {
     $arch = $env:PROCESSOR_ARCHITECTURE
     $wow64arch = $env:PROCESSOR_ARCHITEW6432
-    
+
     if ($wow64arch -eq "AMD64" -or $arch -eq "AMD64") {
         return "amd64"
     }
@@ -61,12 +61,12 @@ function Get-Architecture {
 # Install using winget
 function Install-WithWinget {
     Write-Info "Installing via winget..."
-    
+
     if (-not (Test-Command "winget")) {
         Write-Error "winget is not installed or not available."
         return $false
     }
-    
+
     try {
         winget install Sourcegraph.Amp --accept-source-agreements --accept-package-agreements
         return $true
@@ -80,12 +80,12 @@ function Install-WithWinget {
 # Install using Chocolatey
 function Install-WithChocolatey {
     Write-Info "Installing via Chocolatey..."
-    
+
     if (-not (Test-Command "choco")) {
         Write-Error "Chocolatey is not installed."
         return $false
     }
-    
+
     try {
         choco install amp -y
         return $true
@@ -99,12 +99,12 @@ function Install-WithChocolatey {
 # Install using Scoop
 function Install-WithScoop {
     Write-Info "Installing via Scoop..."
-    
+
     if (-not (Test-Command "scoop")) {
         Write-Error "Scoop is not installed."
         return $false
     }
-    
+
     try {
         # Add bucket if not already added
         try {
@@ -113,7 +113,7 @@ function Install-WithScoop {
         catch {
             # Bucket might already exist, continue
         }
-        
+
         scoop install amp
         return $true
     }
@@ -126,66 +126,82 @@ function Install-WithScoop {
 # Manual installation by downloading binary
 function Install-Manual {
     param([string]$Arch)
-    
+
     Write-Info "Installing manually via binary download..."
-    
+
     $binaryUrl = "https://github.com/sourcegraph/amp-cli/releases/download/v$Version/amp-windows-$Arch.zip"
     $tempDir = [System.IO.Path]::GetTempPath()
     $zipFile = Join-Path $tempDir "amp-windows-$Arch.zip"
     $extractDir = Join-Path $tempDir "amp-extract"
-    
+
     # Determine installation directory
     $installDir = "$env:LOCALAPPDATA\Programs\Amp"
     $binPath = Join-Path $installDir "amp.exe"
-    
+
     try {
         Write-Info "Downloading $binaryUrl..."
         Invoke-WebRequest -Uri $binaryUrl -OutFile $zipFile -UseBasicParsing
-        
+
         Write-Info "Extracting archive..."
         if (Test-Path $extractDir) {
             Remove-Item $extractDir -Recurse -Force
         }
         Expand-Archive -Path $zipFile -DestinationPath $extractDir -Force
-        
+
         Write-Info "Installing to $installDir..."
         if (-not (Test-Path $installDir)) {
             New-Item -ItemType Directory -Path $installDir -Force | Out-Null
         }
-        
+
         # Find amp.exe in extracted files
         $ampExe = Get-ChildItem -Path $extractDir -Name "amp.exe" -Recurse | Select-Object -First 1
         if (-not $ampExe) {
             throw "amp.exe not found in downloaded archive"
         }
-        
+
         $sourcePath = Join-Path $extractDir $ampExe.Name
         Copy-Item $sourcePath $binPath -Force
-        
+
         # Add to PATH if not already there
         $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
         if ($userPath -notlike "*$installDir*") {
-            Write-Info "Adding $installDir to user PATH..."
-            $newPath = "$userPath;$installDir"
-            [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
-            
-            # Update current session PATH
-            $env:PATH = "$env:PATH;$installDir"
+            Write-Host ""
+            Write-Warning "The amp binary was installed to $installDir, which is not in your PATH."
+            Write-Host "To make 'amp' available in your shell, we need to add this directory to your user PATH environment variable."
+            Write-Host ""
+            Write-Host "Current user PATH: $userPath" -ForegroundColor Gray
+            Write-Host "Will add: $installDir" -ForegroundColor Yellow
+            Write-Host ""
+            $response = Read-Host "Do you want to add this to your user PATH environment variable? (y/N)"
+            if ($response -eq "y" -or $response -eq "Y") {
+                Write-Info "Adding $installDir to user PATH..."
+                $newPath = "$userPath;$installDir"
+                [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
+
+                # Update current session PATH
+                $env:PATH = "$env:PATH;$installDir"
+                Write-Success "PATH environment variable updated successfully!"
+                Write-Warning "You may need to restart PowerShell for the changes to take effect."
+            }
+            else {
+                Write-Warning "PATH not modified. You can manually add $installDir to your PATH environment variable."
+                Write-Info "Or use the full path: $binPath"
+            }
         }
-        
+
         # Cleanup
         Remove-Item $zipFile -Force -ErrorAction SilentlyContinue
         Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
-        
+
         return $true
     }
     catch {
         Write-Error "Failed to install manually: $($_.Exception.Message)"
-        
+
         # Cleanup on failure
         Remove-Item $zipFile -Force -ErrorAction SilentlyContinue
         Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
-        
+
         return $false
     }
 }
@@ -202,11 +218,11 @@ function Main {
     Write-Info "Amp CLI Windows Installer"
     Write-Info "Version: $Version"
     Write-Host ""
-    
+
     try {
         $arch = Get-Architecture
         Write-Info "Detected architecture: $arch"
-        
+
         # Check if amp is already installed
         if (Test-Command "amp") {
             Write-Warning "Amp CLI is already installed. Use 'amp --version' to check the current version."
@@ -216,17 +232,17 @@ function Main {
                 return
             }
         }
-        
+
         $isAdmin = Test-Administrator
         if ($isAdmin) {
             Write-Info "Running as administrator"
         } else {
             Write-Info "Running as regular user"
         }
-        
+
         # Try installation methods in order of preference
         $installed = $false
-        
+
         # Try winget first (Windows 10+)
         if (Install-WithWinget) {
             Write-Success "Successfully installed Amp via winget!"
@@ -255,12 +271,12 @@ function Main {
             Write-Info "3. Install winget: Available on Windows 10+ via Microsoft Store"
             exit 1
         }
-        
+
         if ($installed) {
             Write-Host ""
             Write-Success "Amp CLI has been installed successfully!"
             Write-Info "Run 'amp --help' to get started."
-            
+
             # Test if amp is available
             try {
                 $version = & amp --version 2>$null

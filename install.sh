@@ -321,9 +321,33 @@ install_manual() {
 
         # Add to PATH if not already there
         if [[ ":$PATH:" != *":$install_dir:"* ]]; then
-            print_warning "Adding $install_dir to PATH in your shell profile"
-            echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >>"$HOME/.bashrc"
-            echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >>"$HOME/.zshrc" 2>/dev/null || true
+            echo ""
+            print_warning "The amp binary was installed to $install_dir, which is not in your PATH."
+            echo "To make 'amp' available in your shell, we need to add the following line to your shell configuration files:"
+            echo ""
+            echo '    export PATH="$HOME/.local/bin:$PATH"'
+            echo ""
+            echo "This will be added to:"
+            [[ -f "$HOME/.bashrc" ]] && echo "  - $HOME/.bashrc"
+            [[ -f "$HOME/.zshrc" ]] && echo "  - $HOME/.zshrc"
+            echo ""
+            read -p "Do you want to add this to your shell configuration files? (y/N): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                print_status "Adding $install_dir to PATH in shell configuration files..."
+                if [[ -f "$HOME/.bashrc" ]]; then
+                    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.bashrc"
+                fi
+                if [[ -f "$HOME/.zshrc" ]]; then
+                    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.zshrc" 2>/dev/null || true
+                fi
+                print_success "Shell configuration files updated successfully!"
+                print_warning "Please restart your shell or run 'source ~/.bashrc' (or 'source ~/.zshrc') to apply the changes."
+            else
+                print_warning "Shell configuration not modified. You can manually add the following line to your ~/.bashrc or ~/.zshrc:"
+                echo '    export PATH="$HOME/.local/bin:$PATH"'
+                print_warning "Or use the full path: $install_dir/amp"
+            fi
         fi
     fi
 

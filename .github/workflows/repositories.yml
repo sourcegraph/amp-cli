@@ -89,6 +89,19 @@ jobs:
           chmod +x scripts/build-rpm-repo.sh
           ./scripts/build-rpm-repo.sh rpms repository/rpm
 
+      - name: Export GPG public key
+        run: |
+          if [ -n "$GPG_KEY_ID" ]; then
+            echo "Exporting GPG public key for repositories..."
+            mkdir -p repository/gpg
+            gpg --armor --export "$GPG_KEY_ID" > repository/gpg/amp-cli.asc
+            echo "GPG public key exported to repository/gpg/amp-cli.asc"
+          else
+            echo "Warning: GPG_KEY_ID not set, creating placeholder"
+            mkdir -p repository/gpg
+            echo "# GPG key not available" > repository/gpg/amp-cli.asc
+          fi
+
       - name: Create release assets
         run: |
           # Create repository archives

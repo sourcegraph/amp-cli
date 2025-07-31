@@ -32,6 +32,8 @@ jobs:
           $version = "${{ github.event.release.tag_name ||
             github.event.inputs.version || github.event.client_payload.version }}"
           $version = $version -replace '^v', ''
+          # Remove git SHA suffix to simplify version (e.g., 0.0.1753960840-gd58826 -> 0.0.1753960840)
+          $version = $version -replace '-g[a-f0-9]+$', ''
 
           # Update version in nuspec
           (Get-Content chocolatey/amp.nuspec) -replace
@@ -54,8 +56,7 @@ jobs:
           $nupkgFile = Get-ChildItem -Name "amp.*.nupkg"
           if ($nupkgFile) {
             Write-Host "Testing package: $nupkgFile"
-            # Install with --pre flag to handle pre-release versions
-            choco install amp -s . -f -y --pre
+            choco install amp -s . -f -y
             amp --help || Write-Host "amp binary installed but may have terminal compatibility issues in CI"
             choco uninstall amp -y
           } else {
@@ -80,7 +81,10 @@ jobs:
       - name: Publish to Chocolatey
         run: |
           cd chocolatey
-          choco push amp.${{ github.event.release.tag_name ||
-            github.event.inputs.version || github.event.client_payload.version }}.nupkg
+          $originalVersion = "${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}"
+          $originalVersion = $originalVersion -replace '^v', ''
+          $cleanVersion = $originalVersion -replace '-g[a-f0-9]+$', ''
+          choco push amp.$cleanVersion.nupkg
             -s https://push.chocolatey.org/
             -k ${{ secrets.CHOCO_PUBLISH_TOKEN }}

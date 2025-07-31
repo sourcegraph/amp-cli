@@ -13,6 +13,10 @@ name: Build Debian Packages
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: debian-package
+  cancel-in-progress: true
+
 jobs:
   build-deb:
     runs-on: ubuntu-latest

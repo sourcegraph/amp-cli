@@ -13,6 +13,10 @@ name: Build Docker Images
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: docker-images
+  cancel-in-progress: true
+
 jobs:
   build-docker:
     runs-on: ubuntu-latest
@@ -64,6 +68,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             AMP_ARCH=${{ matrix.arch }}
-            AMP_VERSION=${{ github.event.release.tag_name || github.event.inputs.version || github.event.client_payload.version }}
+            AMP_VERSION=${{
+              github.event.release.tag_name ||
+              github.event.inputs.version ||
+              github.event.client_payload.version
+            }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

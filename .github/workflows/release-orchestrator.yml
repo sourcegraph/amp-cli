@@ -5,6 +5,10 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: release-orchestrator
+  cancel-in-progress: true
+
 jobs:
   sign-binaries:
     runs-on: ubuntu-latest

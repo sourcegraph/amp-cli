@@ -13,6 +13,10 @@ name: Build Package Repositories
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: package-repositories
+  cancel-in-progress: true
+
 jobs:
   build-repositories:
     runs-on: ubuntu-latest

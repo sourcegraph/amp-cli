@@ -13,6 +13,10 @@ name: Nix Package
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: nix-package
+  cancel-in-progress: true
+
 jobs:
   update-nix:
     runs-on: ubuntu-latest

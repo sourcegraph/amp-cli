@@ -13,6 +13,10 @@ name: Update AUR Package
         required: true
         type: string
 
+concurrency:
+  group: aur-package
+  cancel-in-progress: true
+
 jobs:
   update-aur:
     runs-on: ubuntu-latest

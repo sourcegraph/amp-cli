@@ -13,6 +13,10 @@ name: Chocolatey Package
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: chocolatey-package
+  cancel-in-progress: true
+
 jobs:
   update-chocolatey:
     runs-on: windows-latest

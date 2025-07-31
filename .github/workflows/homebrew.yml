@@ -13,6 +13,10 @@ name: Homebrew Package
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: homebrew-package
+  cancel-in-progress: true
+
 jobs:
   update-homebrew:
     runs-on: macos-latest

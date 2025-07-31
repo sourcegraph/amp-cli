@@ -13,6 +13,10 @@ name: Build RPM Packages
   repository_dispatch:
     types: [release-orchestrator]
 
+concurrency:
+  group: rpm-package
+  cancel-in-progress: true
+
 jobs:
   build-rpm:
     runs-on: ubuntu-latest

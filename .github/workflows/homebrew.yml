@@ -52,22 +52,8 @@ jobs:
           echo "Linux ARM64: $linux_arm64_sha"
           echo "Linux x64: $linux_x64_sha"
 
-          # First restore placeholders to ensure consistency every time
-          sed -i '' "s/version \"[^\"]*\"/version \"VERSION_PLACEHOLDER\"/" Formula/amp.rb
-          sed -i '' "s|https://github.com/sourcegraph/amp-packages/releases/download/v[^/]*/|\
-            https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/|g" Formula/amp.rb
-          sed -i '' "s/sha256 '[^']*'/sha256 'REPLACE_WITH_PLACEHOLDER'/g" Formula/amp.rb
-
-          # Restore specific SHA256 placeholders by position in file
-          sed -i '' '8s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/' Formula/amp.rb
-          sed -i '' '14s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/' Formula/amp.rb
-          sed -i '' '17s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_AMD64_SHA256/' Formula/amp.rb
-          sed -i '' '23s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_ARM64_SHA256/' Formula/amp.rb
-          sed -i '' '26s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_AMD64_SHA256/' Formula/amp.rb
-
-          # Now replace placeholders with actual values
+          # Replace placeholders with actual values
           sed -i '' "s/VERSION_PLACEHOLDER/$version/g" Formula/amp.rb
-          sed -i '' "s/vVERSION_PLACEHOLDER/v$version/g" Formula/amp.rb
           sed -i '' "s/REPLACE_WITH_DARWIN_ARM64_SHA256/$darwin_arm64_sha/g" Formula/amp.rb
           sed -i '' "s/REPLACE_WITH_DARWIN_AMD64_SHA256/$darwin_x64_sha/g" Formula/amp.rb
           sed -i '' "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/g" Formula/amp.rb

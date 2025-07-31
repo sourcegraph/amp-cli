@@ -1,0 +1,70 @@
+---
+name: Installation Test
+
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-installations:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            package_manager: homebrew
+          - os: ubuntu-latest
+            package_manager: homebrew
+          - os: windows-latest
+            package_manager: chocolatey
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test Homebrew Installation (macOS/Linux)
+        if: matrix.package_manager == 'homebrew'
+        run: |
+          # Install Homebrew if not present (mainly for Linux)
+          if ! command -v brew &> /dev/null; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" || true
+          fi
+
+          # Tap the repository
+          brew tap sourcegraph/amp-packages https://github.com/sourcegraph/amp-packages
+
+          # Install amp
+          brew install amp
+
+          # Test that amp is working
+          amp --version
+
+          # Clean up
+          brew uninstall amp
+          brew untap sourcegraph/amp-packages
+
+      - name: Test Chocolatey Installation (Windows)
+        if: matrix.package_manager == 'chocolatey'
+        shell: powershell
+        run: |
+          # Install Chocolatey if not present
+          if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            [System.Net.ServicePointManager]::SecurityProtocol = `
+              [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          }
+
+          # Install amp from Chocolatey community repository
+          choco install amp -y
+
+          # Test that amp is working
+          amp --version
+
+          # Clean up
+          choco uninstall amp -y

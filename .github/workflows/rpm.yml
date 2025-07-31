@@ -67,6 +67,10 @@ jobs:
           # Build RPM
           rpmbuild --target ${{ matrix.arch }} -bb ~/rpmbuild/SPECS/amp.spec
 
+          # Debug: List what was actually built
+          echo "Listing rpmbuild RPMS directory structure:"
+          find ~/rpmbuild/RPMS -type f -name "*.rpm" || echo "No RPM files found"
+
       - name: Upload .rpm artifact
         uses: actions/upload-artifact@v4
         with:

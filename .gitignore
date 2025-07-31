@@ -11,3 +11,61 @@ devenv.local.nix
 # Nix build results
 result
 result-*
+
+# RPM packages
+*.rpm
+
+# Debian packages
+*.deb
+
+# Choco packages
+*.nupkg
+
+# Build artifacts and temporary files
+artifacts/
+debs/
+rpms/
+repository/
+release-assets/
+*.tar.gz
+*.zip
+
+# GPG signing artifacts
+*.asc
+*.sig
+*.gpg
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.exe
+*.msi
+
+# Binaries
+amp-*
+!amp-*.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+.tmp/

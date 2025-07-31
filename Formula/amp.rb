@@ -4,27 +4,27 @@
 class Amp < Formula
   desc 'Amp CLI - AI-powered coding assistant'
   homepage 'https://github.com/sourcegraph/amp-packages'
-  url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753987260-gda0d4e/amp-darwin-arm64'
-  sha256 'db7a96f9d1a4f34003a85f3970f63c8724fea4b30ea0adfffbc1963c36798709'
-  version '0.0.1753987260-gda0d4e'
+  url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753992324-g10d932/amp-darwin-arm64'
+  sha256 'f9d86d414936c4cf1ea4fb08aee1e0944674360e6728258432227cf4cff971d3'
+  version '0.0.1753992324-g10d932'
 
   on_macos do
     if Hardware::CPU.arm?
-      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753987260-gda0d4e/amp-darwin-arm64'
-      sha256 'db7a96f9d1a4f34003a85f3970f63c8724fea4b30ea0adfffbc1963c36798709'
+      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753992324-g10d932/amp-darwin-arm64'
+      sha256 'f9d86d414936c4cf1ea4fb08aee1e0944674360e6728258432227cf4cff971d3'
     else
-      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753987260-gda0d4e/amp-darwin-x64'
-      sha256 '33f56c581bbfc7bea84b6127dd614f2ef362730635ba2c115ac82a66f348c26b'
+      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753992324-g10d932/amp-darwin-x64'
+      sha256 'c54de14f742958d6650c71fd2461ede4f65f8e4e4318a1ea7f80af81e9ac1e5e'
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753987260-gda0d4e/amp-linux-arm64'
-      sha256 '075491b8ebf0145dfa8f925ec338c158ec45d82ea105c95325d35964896b44b6'
+      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753992324-g10d932/amp-linux-arm64'
+      sha256 'af8f55a35ebf6f76fec4f6f6d0d27c16625727231cc5884297b3a6a58184f77f'
     else
-      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753987260-gda0d4e/amp-linux-x64'
-      sha256 'f5b611c471c5487e9004173aee93f26c777aee351de2a4aceaf1d947be2b7d4a'
+      url '                https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753992324-g10d932/amp-linux-x64'
+      sha256 '500bfb66857ba6cc6e697f12512184fee2eb83477269e646bf05ff3dfca0e596'
     end
   end
 

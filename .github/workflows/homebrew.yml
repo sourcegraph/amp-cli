@@ -32,8 +32,8 @@ jobs:
 
       - name: Commit updated formula
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "amp@ampcode.com"
+          git config --local user.name "Amp"
           git add Formula/amp.rb
           git commit -m "Update Homebrew formula to ${{
             github.event.release.tag_name ||

@@ -84,8 +84,8 @@ jobs:
           makepkg --printsrcinfo > .SRCINFO
 
           # Configure git
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          git config user.name "Amp"
+          git config user.email "amp@ampcode.com"
 
           # Commit and push changes
           git add PKGBUILD .SRCINFO
@@ -111,8 +111,8 @@ jobs:
           cp aur-repo/.SRCINFO aur/amp-bin/.SRCINFO
 
           # Update local repository
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "amp@ampcode.com"
+          git config --local user.name "Amp"
           git add aur/amp-bin/
           git commit -m "Update AUR package to $version with checksums" ||
             exit 0

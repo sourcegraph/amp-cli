@@ -42,8 +42,8 @@ jobs:
 
       - name: Commit updated flake
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "amp@ampcode.com"
+          git config --local user.name "Amp"
           git add flake.nix
           git commit -m "Update Nix flake to ${{
             github.event.release.tag_name ||

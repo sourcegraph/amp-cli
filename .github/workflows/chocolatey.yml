@@ -40,9 +40,12 @@ jobs:
             '<version>.*</version>', "<version>$version</version>" |
             Set-Content chocolatey/amp.nuspec
 
-          # Update download URL in install script
+          # Update download URL in install script (use original version with SHA for actual download)
+          $originalVersion = "${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}"
+          $originalVersion = $originalVersion -replace '^v', ''
           (Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace
-            'v[0-9]+\.[0-9]+\.[0-9]+', "v$version" |
+            'v[0-9]+\.[0-9]+\.[0-9a-zA-Z\.\-]+', "v$originalVersion" |
             Set-Content chocolatey/tools/chocolateyinstall.ps1
 
       - name: Build chocolatey package

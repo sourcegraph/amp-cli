@@ -27,8 +27,8 @@
         shaMap = {
           "linux-x64" = "4746f013f2efce96ae527a3cd68e63f29548d02e61e3a3ef8ee3e99e07f85850";
           "linux-arm64" = "a53771f1ba140b338c7a987cd9fde525795e447e89d875f00f8d6b52f7d4f197";
-          "darwin-x64" = "";
-          "darwin-arm64" = "";
+          "darwin-x64" = "637a9c7b12a95bfa1f728fd2f3e894b4d9e8538c3d41350264e574889024cfb2";
+          "darwin-arm64" = "e697985367883f64a24f4c061bd0e10412fded6755de6ba1f6b8a54b9e10d281";
         };
 
       in

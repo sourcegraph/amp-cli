@@ -55,6 +55,20 @@ jobs:
           amp --version
           choco uninstall amp -y
 
+      - name: Upload .nupkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amp-chocolatey.nupkg
+          path: chocolatey/amp.*.nupkg
+
+      - name: Attach Chocolatey Package to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: chocolatey/amp.*.nupkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # Note: Actual publishing would require API key
       # - name: Publish to Chocolatey
       #   run: |

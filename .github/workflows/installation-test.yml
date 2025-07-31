@@ -14,6 +14,7 @@ concurrency:
 jobs:
   test-installations:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -36,7 +37,9 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Test Homebrew Installation (macOS/Linux)
+        id: test-homebrew
         if: matrix.package_manager == 'homebrew'
+        continue-on-error: true
         run: |
           # Install Homebrew if not present (mainly for Linux)
           if ! command -v brew &> /dev/null; then
@@ -59,7 +62,9 @@ jobs:
           brew untap sourcegraph/amp-packages
 
       - name: Test Chocolatey Installation (Windows)
+        id: test-chocolatey
         if: matrix.package_manager == 'chocolatey'
+        continue-on-error: true
         shell: powershell
         run: |
           # Install Chocolatey if not present
@@ -85,7 +90,9 @@ jobs:
           }
 
       - name: Test Docker Container (Linux)
+        id: test-docker
         if: matrix.package_manager == 'docker'
+        continue-on-error: true
         run: |
           # Set up Docker Buildx for multi-platform support
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -109,4 +116,40 @@ jobs:
           else
             echo "Failed to pull amp Docker container for ${{ matrix.arch }} - container may not be published yet"
             echo "This is expected for new releases that haven't been built yet"
+          fi
+
+      - name: Check test results
+        if: always()
+        run: |
+          # Check if any tests failed and fail the job if so
+          failed=0
+
+          if [[ "${{ steps.test-homebrew.outcome }}" == "failure" ]]; then
+            echo "❌ Homebrew installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-homebrew.outcome }}" == "success" ]]; then
+            echo "✅ Homebrew installation test passed"
+          fi
+
+          if [[ "${{ steps.test-chocolatey.outcome }}" == "failure" ]]; then
+            echo "❌ Chocolatey installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-chocolatey.outcome }}" == "success" ]]; then
+            echo "✅ Chocolatey installation test passed"
+          fi
+
+          if [[ "${{ steps.test-docker.outcome }}" == "failure" ]]; then
+            echo "❌ Docker container test failed"
+            failed=1
+          elif [[ "${{ steps.test-docker.outcome }}" == "success" ]]; then
+            echo "✅ Docker container test passed"
+          fi
+
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "❌ One or more installation tests failed"
+            exit 1
+          else
+            echo ""
+            echo "✅ All applicable installation tests passed"
           fi

@@ -41,11 +41,12 @@ jobs:
           fi
 
           wget "https://github.com/sourcegraph/amp-packages/releases/download/v${version}/${asset_name}"
-          # Create a tar.gz file for the RPM build process
-          mkdir -p amp-${version}
-          cp ${asset_name} amp-${version}/amp
-          chmod +x amp-${version}/amp
-          tar -czf amp-${version}.tar.gz amp-${version}/
+          # Create a tar.gz file for the RPM build process with RPM-compatible directory name
+          rpm_version=$(echo "${version}" | sed 's/-/./g')
+          mkdir -p amp-${rpm_version}
+          cp ${asset_name} amp-${rpm_version}/amp
+          chmod +x amp-${rpm_version}/amp
+          tar -czf amp-${rpm_version}.tar.gz amp-${rpm_version}/
 
       - name: Build .rpm package
         run: |
@@ -59,8 +60,8 @@ jobs:
 
           # Set up RPM build environment
           mkdir -p ~/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
-          # Copy with RPM-compatible filename
-          cp amp-${version}.tar.gz ~/rpmbuild/SOURCES/amp-${rpm_version}.tar.gz
+          # Copy the RPM-compatible tar.gz file
+          cp amp-${rpm_version}.tar.gz ~/rpmbuild/SOURCES/
           cp rpm/amp.spec ~/rpmbuild/SPECS/
 
           # Build RPM

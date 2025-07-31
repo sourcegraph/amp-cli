@@ -32,7 +32,9 @@ jobs:
 
           # Download binaries and calculate checksums
           echo "Downloading binaries to calculate checksums..."
-          gh release download "v${version}" --repo sourcegraph/amp-cli --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64" --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
+          gh release download "v${version}" --repo sourcegraph/amp-cli \
+            --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64" \
+            --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
 
           # Calculate SHA256 checksums
           darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64 | cut -d' ' -f1)
@@ -42,20 +44,19 @@ jobs:
 
           echo "Checksums calculated:"
           echo "Darwin ARM64: $darwin_arm64_sha"
-          echo "Darwin x64: $darwin_x64_sha" 
+          echo "Darwin x64: $darwin_x64_sha"
           echo "Linux ARM64: $linux_arm64_sha"
           echo "Linux x64: $linux_x64_sha"
 
           # Update version and URLs in formula
           sed -i '' "s/version \".*\"/version \"$version\"/" Formula/amp.rb
           sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" Formula/amp.rb
-          
-          # Update SHA256 checksums
-          sed -i '' "s/REPLACE_WITH_ACTUAL_SHA256/$darwin_arm64_sha/" Formula/amp.rb
-          sed -i '' "s/REPLACE_WITH_ARM64_SHA256/$darwin_arm64_sha/" Formula/amp.rb
-          sed -i '' "s/REPLACE_WITH_AMD64_SHA256/$darwin_x64_sha/" Formula/amp.rb
-          sed -i '' "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" Formula/amp.rb
-          sed -i '' "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/" Formula/amp.rb
+
+          # Update SHA256 checksums with standardized placeholder names
+          sed -i '' "s/REPLACE_WITH_DARWIN_ARM64_SHA256/$darwin_arm64_sha/g" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_DARWIN_AMD64_SHA256/$darwin_x64_sha/g" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/g" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/g" Formula/amp.rb
 
           # Clean up downloaded files
           rm -f amp-darwin-arm64 amp-darwin-x64 amp-linux-arm64 amp-linux-x64

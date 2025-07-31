@@ -7,7 +7,7 @@ Standards-Version: 4.1.2
 Homepage: https://github.com/sourcegraph/amp-cli
 
 Package: amp
-Architecture: amd64 arm64
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ripgrep
 Description: AI-powered coding assistant CLI tool
  Amp CLI is an AI-powered coding assistant that helps developers write better code faster.

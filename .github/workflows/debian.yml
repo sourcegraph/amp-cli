@@ -7,7 +7,7 @@ name: Build Debian Packages
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to update (e.g., 1.0.0)'
+        description: "Version to update (e.g., 1.0.0)"
         required: true
         type: string
   repository_dispatch:
@@ -43,10 +43,11 @@ jobs:
           fi
 
           wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/${asset_name}"
-          # Create directory and move binary for packaging
-          mkdir -p amp-${version}
-          cp ${asset_name} amp-${version}/amp
-          chmod +x amp-${version}/amp
+          chmod +x ${asset_name}
+
+          # Create directory structure for debian packaging
+          mkdir -p usr/bin
+          cp ${asset_name} usr/bin/amp
 
       - name: Build .deb package
         run: |
@@ -55,17 +56,27 @@ jobs:
           version="${version#v}"
 
           # Update changelog version
-          sed -i "s/amp (.*)/amp (${version}-1)/" debian/changelog
+          sed -i "1s/amp (.*)/amp (${version}-1) unstable; urgency=medium/" debian/changelog
 
           # Install build dependencies
           sudo apt-get update
           sudo apt-get install -y debhelper build-essential
 
+          # Create DEBIAN directory structure
+          mkdir -p DEBIAN
+
+          # Calculate installed size (in KB)
+          size=$(du -k usr/bin/amp | cut -f1)
+
+          # Create control file with correct architecture
+          sed "s/Architecture: .*/Architecture: ${{ matrix.arch }}/" debian/control > DEBIAN/control
+          echo "Installed-Size: $size" >> DEBIAN/control
+
           # Build package
-          dpkg-buildpackage -us -uc -b --host-arch=${{ matrix.arch }}
+          dpkg-deb --build . ../amp_${version}-1_${{ matrix.arch }}.deb
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: amp-${{ matrix.arch }}.deb
-          path: ../amp_*.deb
+          path: ../amp_*_${{ matrix.arch }}.deb

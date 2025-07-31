@@ -48,7 +48,8 @@ jobs:
           version="${version#v}"
 
           # Download release files to calculate checksums
-          gh release download "v${version}" --repo sourcegraph/amp-cli --pattern "amp-linux-x64" --pattern "amp-linux-arm64"
+          gh release download "v${version}" --repo sourcegraph/amp-cli \
+            --pattern "amp-linux-x64" --pattern "amp-linux-arm64"
 
           # Calculate SHA256 checksums
           amd64_sha=$(sha256sum amp-linux-x64 | cut -d' ' -f1)
@@ -59,6 +60,19 @@ jobs:
 
           # Clean up
           rm amp-linux-*
+
+      - name: Update local PKGBUILD first
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version ||
+            github.event.client_payload.version }}"
+          version="${version#v}"
+
+          # Update local PKGBUILD with version and checksums
+          cp aur/amp-bin/PKGBUILD aur/amp-bin/PKGBUILD.bak
+          sed -i "s/REPLACE_WITH_VERSION/$version/g" aur/amp-bin/PKGBUILD
+          sed -i "s/REPLACE_WITH_LINUX_AMD64_SHA256/${{ steps.checksums.outputs.amd64_sha }}/g" aur/amp-bin/PKGBUILD
+          sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/${{ steps.checksums.outputs.arm64_sha }}/g" aur/amp-bin/PKGBUILD
 
       - name: Clone and update AUR package
         run: |
@@ -71,15 +85,8 @@ jobs:
           git clone ssh://aur@aur.archlinux.org/amp-bin.git aur-repo
           cd aur-repo
 
-          # Update PKGBUILD
-          sed -i "s/pkgver=.*/pkgver=$version/" PKGBUILD
-          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" PKGBUILD
-          sed -i \
-            "s/sha256sums_x86_64=.*/sha256sums_x86_64=('${{
-            steps.checksums.outputs.amd64_sha }}')/" PKGBUILD
-          sed -i \
-            "s/sha256sums_aarch64=.*/sha256sums_aarch64=('${{
-            steps.checksums.outputs.arm64_sha }}')/" PKGBUILD
+          # Copy our updated PKGBUILD to the AUR repo
+          cp ../aur/amp-bin/PKGBUILD ./PKGBUILD
 
           # Generate new .SRCINFO
           makepkg --printsrcinfo > .SRCINFO

@@ -37,7 +37,9 @@ jobs:
 
           # Download binaries and calculate checksums
           echo "Downloading binaries to calculate checksums..."
-          gh release download "v${version}" --repo sourcegraph/amp-cli --pattern "amp-linux-x64" --pattern "amp-linux-arm64" --pattern "amp-darwin-x64" --pattern "amp-darwin-arm64"
+          gh release download "v${version}" --repo sourcegraph/amp-cli \
+            --pattern "amp-linux-x64" --pattern "amp-linux-arm64" \
+            --pattern "amp-darwin-x64" --pattern "amp-darwin-arm64"
 
           # Calculate SHA256 checksums
           linux_x64_sha=$(sha256sum amp-linux-x64 | cut -d' ' -f1)
@@ -52,9 +54,8 @@ jobs:
           echo "Darwin ARM64: $darwin_arm64_sha"
 
           # Update version in flake.nix
-          sed -i "s/version = \".*\";/version = \"$version\";/" flake.nix
-          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" flake.nix
-          
+          sed -i "s/REPLACE_WITH_VERSION/$version/" flake.nix
+
           # Update SHA256 checksums
           sed -i "s/REPLACE_WITH_LINUX_X64_SHA256/$linux_x64_sha/" flake.nix
           sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" flake.nix

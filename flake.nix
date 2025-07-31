@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        
+
         # Map system to release architecture
         archMap = {
           "x86_64-linux" = "linux-x64";
@@ -18,11 +18,11 @@
           "x86_64-darwin" = "darwin-x64";
           "aarch64-darwin" = "darwin-arm64";
         };
-        
+
         arch = archMap.${system} or (throw "Unsupported system: ${system}");
-        
-        version = "0.0.1753935578-gd618e6";
-        
+
+        version = "REPLACE_WITH_VERSION";
+
         # These will need to be updated with actual SHA256 hashes
         shaMap = {
           "linux-x64" = "REPLACE_WITH_LINUX_X64_SHA256";
@@ -31,7 +31,8 @@
           "darwin-arm64" = "REPLACE_WITH_DARWIN_ARM64_SHA256";
         };
 
-      in {
+      in
+      {
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "amp";
           inherit version;
@@ -42,21 +43,21 @@
           };
 
           buildInputs = [ pkgs.ripgrep ];
-          
+
           dontBuild = true;
           dontConfigure = true;
 
           installPhase = ''
             runHook preInstall
-            
+
             mkdir -p $out/bin
             cp $src $out/bin/amp
             chmod +x $out/bin/amp
-            
+
             # Create wrapper to ensure ripgrep is in PATH
             wrapProgram $out/bin/amp \
               --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ripgrep ]}
-            
+
             runHook postInstall
           '';
 

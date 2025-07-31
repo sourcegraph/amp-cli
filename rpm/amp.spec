@@ -5,8 +5,7 @@ Summary:        AI-powered coding assistant CLI tool
 
 License:        MIT
 URL:            https://github.com/sourcegraph/amp-cli
-Source0:        https://github.com/sourcegraph/amp-cli/releases/download/v%{version}/amp-linux-amd64.tar.gz
-Source1:        https://github.com/sourcegraph/amp-cli/releases/download/v%{version}/amp-linux-arm64.tar.gz
+Source0:        amp-%{version}.tar.gz
 
 BuildArch:      x86_64 aarch64
 Requires:       ripgrep
@@ -23,14 +22,7 @@ Features:
 - Easy command-line interface
 
 %prep
-%ifarch x86_64
-%setup -q -c -T
-tar -xzf %{SOURCE0}
-%endif
-%ifarch aarch64
-%setup -q -c -T
-tar -xzf %{SOURCE1}
-%endif
+%setup -q
 
 %build
 # No build required for binary package

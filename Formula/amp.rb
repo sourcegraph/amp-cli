@@ -3,7 +3,7 @@ class Amp < Formula
   homepage "https://github.com/sourcegraph/amp-cli"
   url "https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-darwin-arm64.tar.gz"
   sha256 "REPLACE_WITH_ACTUAL_SHA256"
-  version "0.0.1753933154-g7183ed"
+  version "0.0.1753935142-gd618e6"
 
   on_macos do
     if Hardware::CPU.arm?

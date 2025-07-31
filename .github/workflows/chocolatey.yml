@@ -56,7 +56,8 @@ jobs:
           $nupkgFile = Get-ChildItem -Name "amp.*.nupkg"
           if ($nupkgFile) {
             Write-Host "Testing package: $nupkgFile"
-            choco install amp -s . -f -y
+            # Install with local source plus main repo for dependencies
+            choco install amp -s ".;https://community.chocolatey.org/api/v2/" -f -y
             amp --help || Write-Host "amp binary installed but may have terminal compatibility issues in CI"
             choco uninstall amp -y
           } else {

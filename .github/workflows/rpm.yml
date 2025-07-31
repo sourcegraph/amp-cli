@@ -74,13 +74,12 @@ jobs:
           path: ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm
 
       - name: Attach RPM to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm
-          tag_name: >-
-            ${{
-              github.event.release.tag_name ||
-              format('v{0}', github.event.inputs.version || github.event.client_payload.version)
-            }}
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}"
+          if [[ ! "$version" =~ ^v ]]; then
+            version="v${version}"
+          fi
+          gh release upload "$version" ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

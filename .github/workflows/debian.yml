@@ -86,8 +86,12 @@ jobs:
           path: ../amp_*_${{ matrix.arch }}.deb
 
       - name: Attach DEB to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ../amp_*_${{ matrix.arch }}.deb
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}"
+          if [[ ! "$version" =~ ^v ]]; then
+            version="v${version}"
+          fi
+          gh release upload "$version" ../amp_*_${{ matrix.arch }}.deb --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

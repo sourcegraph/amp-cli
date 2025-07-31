@@ -97,12 +97,17 @@ jobs:
             echo "GPG key not found, will be created manually"
 
       - name: Upload repositories to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            debian-repo.tar.gz
-            rpm-repo.tar.gz
-            release-assets/gpg/amp-cli.asc
+        run: |
+          version="${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}"
+          if [[ ! "$version" =~ ^v ]]; then
+            version="v${version}"
+          fi
+          gh release upload "$version" \
+            debian-repo.tar.gz \
+            rpm-repo.tar.gz \
+            release-assets/gpg/amp-cli.asc \
+            --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

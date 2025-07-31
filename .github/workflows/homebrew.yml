@@ -65,8 +65,33 @@ jobs:
         run: |
           git config --local user.email "amp@ampcode.com"
           git config --local user.name "Amp"
-          git add Formula/amp.rb
-          git commit -m "Update Homebrew formula to ${{
-            github.event.release.tag_name ||
-            github.event.inputs.version || github.event.client_payload.version }}" || exit 0
-          git push
+
+          # Retry logic for concurrent workflow conflicts
+          for i in {1..5}; do
+            echo "Attempt $i/5 to commit and push changes"
+
+            # Pull latest changes
+            git pull origin main || true
+
+            # Add and commit changes
+            git add Formula/amp.rb
+            if git commit -m "Update Homebrew formula to ${{
+              github.event.release.tag_name ||
+              github.event.inputs.version || github.event.client_payload.version }}"; then
+
+              # Try to push
+              if git push; then
+                echo "Successfully pushed changes on attempt $i"
+                exit 0
+              else
+                echo "Push failed on attempt $i, retrying..."
+                sleep $((i * 2))
+              fi
+            else
+              echo "No changes to commit on attempt $i"
+              exit 0
+            fi
+          done
+
+          echo "Failed to push after 5 attempts"
+          exit 1

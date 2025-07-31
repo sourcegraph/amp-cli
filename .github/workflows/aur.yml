@@ -106,7 +106,21 @@ jobs:
 
           Automated update from GitHub Actions"
 
-          git push origin master
+          # Retry logic for AUR push
+          for i in {1..3}; do
+            echo "Attempt $i/3 to push to AUR"
+            if git push origin master; then
+              echo "Successfully pushed to AUR on attempt $i"
+              break
+            else
+              echo "AUR push failed on attempt $i, retrying..."
+              sleep $((i * 2))
+              if [ $i -eq 3 ]; then
+                echo "Failed to push to AUR after 3 attempts"
+                exit 1
+              fi
+            fi
+          done
 
       - name: Update local AUR files
         run: |
@@ -119,10 +133,33 @@ jobs:
           cp aur-repo/PKGBUILD aur/amp-bin/PKGBUILD
           cp aur-repo/.SRCINFO aur/amp-bin/.SRCINFO
 
-          # Update local repository
+          # Update local repository with retry logic
           git config --local user.email "amp@ampcode.com"
           git config --local user.name "Amp"
-          git add aur/amp-bin/
-          git commit -m "Update AUR package to $version with checksums" ||
-            exit 0
-          git push
+
+          for i in {1..5}; do
+            echo "Attempt $i/5 to commit and push local AUR changes"
+
+            # Pull latest changes
+            git pull origin main || true
+
+            # Add and commit changes
+            git add aur/amp-bin/
+            if git commit -m "Update AUR package to $version with checksums"; then
+
+              # Try to push
+              if git push; then
+                echo "Successfully pushed local changes on attempt $i"
+                exit 0
+              else
+                echo "Push failed on attempt $i, retrying..."
+                sleep $((i * 2))
+              fi
+            else
+              echo "No changes to commit on attempt $i"
+              exit 0
+            fi
+          done
+
+          echo "Failed to push local changes after 5 attempts"
+          exit 1

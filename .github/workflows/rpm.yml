@@ -35,12 +35,17 @@ jobs:
           version="${version#v}"
 
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            arch_name="amd64"
+            asset_name="amp-linux-x64"
           else
-            arch_name="arm64"
+            asset_name="amp-linux-arm64"
           fi
 
-          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-${arch_name}.tar.gz"
+          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/${asset_name}"
+          # Create a tar.gz file for the RPM build process
+          mkdir -p amp-${version}
+          cp ${asset_name} amp-${version}/amp
+          chmod +x amp-${version}/amp
+          tar -czf ${asset_name}.tar.gz amp-${version}/
 
       - name: Build .rpm package
         run: |

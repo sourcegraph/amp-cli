@@ -30,10 +30,7 @@ jobs:
 
           # Download binaries and calculate checksums
           echo "Downloading binaries to calculate checksums..."
-          curl -fsSL -o amp-darwin-arm64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-darwin-arm64"
-          curl -fsSL -o amp-darwin-x64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-darwin-x64"
-          curl -fsSL -o amp-linux-arm64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-arm64"
-          curl -fsSL -o amp-linux-x64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-x64"
+          gh release download "v${version}" --repo sourcegraph/amp-cli --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64" --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
 
           # Calculate SHA256 checksums
           darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64 | cut -d' ' -f1)

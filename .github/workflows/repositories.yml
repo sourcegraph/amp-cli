@@ -115,35 +115,90 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy to GitHub Pages (repositories)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          # Copy repository files to a GitHub Pages compatible structure
-          mkdir -p gh-pages
-          cp -r repository/* gh-pages/
+      # Authenticate to Google using Workload Identity
+      - name: gcloud auth
+        uses: google-github-actions/auth@v2
+        with:
+          # https://github.com/sourcegraph/infrastructure/tree/main/managed-services/amp-publishing-pipeline
+          # https://console.cloud.google.com/iam-admin/workload-identity-pools/pool/amp-publishing-provider?inv=1&invt=AbyCAQ&project=sourcegraph-dev
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          # Service account must match the service account specified in the MSP rollout specification
+          # https://github.com/sourcegraph/managed-services/blob/main/services/amp/service.yaml
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy repositories to GCP bucket
+        run: |
           # Create index.html for repository listing
-          cat > gh-pages/index.html <<EOF
+          cat > repository/index.html <<EOF
           <!DOCTYPE html>
           <html>
           <head>
               <title>Amp CLI Package Repositories</title>
+              <meta charset="utf-8">
+              <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                h1 { color: #333; }
+                ul { list-style-type: none; padding: 0; }
+                li { margin: 10px 0; }
+                a { color: #007bff; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+                pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                code { font-family: 'Courier New', monospace; }
+              </style>
           </head>
           <body>
               <h1>Amp CLI Package Repositories</h1>
+              <p>Official package repositories for the Amp CLI tool.</p>
               <ul>
-                  <li><a href="debian/">Debian/Ubuntu Repository</a></li>
-                  <li><a href="rpm/">RHEL/Fedora Repository</a></li>
-                  <li><a href="gpg/">GPG Keys</a></li>
+                  <li><a href="debian/">📦 Debian/Ubuntu Repository</a></li>
+                  <li><a href="rpm/">📦 RHEL/Fedora/CentOS Repository</a></li>
+                  <li><a href="gpg/">🔑 GPG Keys</a></li>
               </ul>
+              <h2>Quick Setup</h2>
+              <h3>Debian/Ubuntu</h3>
+              <pre><code>curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc | \
+            sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+          echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] \
+            https://packages.ampcode.com/debian stable main" | \
+            sudo tee /etc/apt/sources.list.d/amp-cli.list
+          sudo apt update && sudo apt install amp</code></pre>
+              <h3>RHEL/Fedora/CentOS</h3>
+              <pre><code>sudo curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc \
+            -o /etc/pki/rpm-gpg/RPM-GPG-KEY-amp-cli
+          sudo tee /etc/yum.repos.d/amp-cli.repo <<'REPO_EOF'
+          [amp-cli]
+          name=Amp CLI Repository
+          baseurl=https://packages.ampcode.com/rpm
+          enabled=1
+          gpgcheck=1
+          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-amp-cli
+          REPO_EOF
+          sudo yum install amp</code></pre>
           </body>
           </html>
           EOF
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          destination_dir: releases/download
+          # Sync repository files to GCP bucket
+          echo "Uploading repository files to gs://packages.ampcode.com/"
+          gsutil -m rsync -r -d repository/ gs://packages.ampcode.com/
+
+          # Set appropriate content types and cache headers
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/index.html || true
+
+          gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
+            -h "Cache-Control:public, max-age=86400" \
+            "gs://packages.ampcode.com/gpg/*.asc" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/debian/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/rpm/**" || true
+
+          echo "Repository deployment completed successfully"

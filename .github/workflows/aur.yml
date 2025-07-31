@@ -46,20 +46,20 @@ jobs:
           version="${version#v}"
 
           # Download release files to calculate checksums
-          curl -fsSL -o amp-linux-amd64.tar.gz \
-            "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-amd64.tar.gz"
-          curl -fsSL -o amp-linux-arm64.tar.gz \
-            "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-arm64.tar.gz"
+          curl -fsSL -o amp-linux-x64 \
+            "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-x64"
+          curl -fsSL -o amp-linux-arm64 \
+            "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-arm64"
 
           # Calculate SHA256 checksums
-          amd64_sha=$(sha256sum amp-linux-amd64.tar.gz | cut -d' ' -f1)
-          arm64_sha=$(sha256sum amp-linux-arm64.tar.gz | cut -d' ' -f1)
+          amd64_sha=$(sha256sum amp-linux-x64 | cut -d' ' -f1)
+          arm64_sha=$(sha256sum amp-linux-arm64 | cut -d' ' -f1)
 
           echo "amd64_sha=$amd64_sha" >> $GITHUB_OUTPUT
           echo "arm64_sha=$arm64_sha" >> $GITHUB_OUTPUT
 
           # Clean up
-          rm amp-linux-*.tar.gz
+          rm amp-linux-*
 
       - name: Clone and update AUR package
         run: |

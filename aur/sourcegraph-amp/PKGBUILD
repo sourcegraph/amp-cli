@@ -11,14 +11,19 @@ depends=('ripgrep')
 provides=('amp')
 conflicts=('amp')
 
-source_x86_64=("${pkgname}-${pkgver}-x86_64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-amd64.tar.gz")
-source_aarch64=("${pkgname}-${pkgver}-aarch64.tar.gz::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-arm64.tar.gz")
+source_x86_64=("${pkgname}-${pkgver}-x86_64::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-x64")
+source_aarch64=("${pkgname}-${pkgver}-aarch64::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-arm64")
 
 sha256sums_x86_64=('REPLACE_WITH_LINUX_AMD64_SHA256')
 sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256')
 
 package() {
-    install -Dm755 "${srcdir}/amp" "${pkgdir}/usr/bin/amp"
+    # The downloaded binary needs to be renamed to amp for installation
+    if [[ "$CARCH" == "x86_64" ]]; then
+        install -Dm755 "${srcdir}/${pkgname}-${pkgver}-x86_64" "${pkgdir}/usr/bin/amp"
+    elif [[ "$CARCH" == "aarch64" ]]; then
+        install -Dm755 "${srcdir}/${pkgname}-${pkgver}-aarch64" "${pkgdir}/usr/bin/amp"
+    fi
 
     # Install license if available
     if [[ -f "${srcdir}/LICENSE" ]]; then

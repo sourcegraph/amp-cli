@@ -19,6 +19,13 @@ jobs:
     if: github.event_name == 'release' ||
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'repository_dispatch'
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: x64
+          - platform: linux/arm64
+            arch: arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,9 +58,12 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            AMP_ARCH=${{ matrix.arch }}
+            AMP_VERSION=${{ github.event.release.tag_name || github.event.inputs.version || github.event.client_payload.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

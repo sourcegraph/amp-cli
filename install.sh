@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Version to install (can be overridden with AMP_VERSION env var)
-VERSION=${AMP_VERSION:-"1.0.0"}
+VERSION=${AMP_VERSION:-"0.0.1753935578-gd618e6"}
 
 # Print colored output
 print_status() {
@@ -52,7 +52,7 @@ detect_os() {
     # Detect architecture
     case $(uname -m) in
     x86_64 | amd64)
-        ARCH="amd64"
+        ARCH="x64"
         ;;
     aarch64 | arm64)
         ARCH="arm64"
@@ -222,7 +222,7 @@ install_rpm_direct() {
     print_status "Installing via direct .rpm package download..."
 
     local rpm_arch
-    if [[ $ARCH == "amd64" ]]; then
+    if [[ $ARCH == "x64" ]]; then
         rpm_arch="x86_64"
     else
         rpm_arch="aarch64"
@@ -285,7 +285,7 @@ install_winget() {
 install_manual() {
     print_status "Installing manually via binary download..."
 
-    local binary_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp-${OS}-${ARCH}.tar.gz"
+    local binary_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp-${OS}-${ARCH}"
     local install_dir="/usr/local/bin"
 
     # Use user bin directory if not root
@@ -297,27 +297,24 @@ install_manual() {
     print_status "Downloading $binary_url..."
     local tmpdir
     tmpdir=$(mktemp -d)
-    local archive_file="$tmpdir/amp.tar.gz"
+    local binary_file="$tmpdir/amp"
 
     if command_exists curl; then
-        curl -fsSL -o "$archive_file" "$binary_url"
+        curl -fsSL -o "$binary_file" "$binary_url"
     elif command_exists wget; then
-        wget -q -O "$archive_file" "$binary_url"
+        wget -q -O "$binary_file" "$binary_url"
     else
         print_error "Neither curl nor wget found. Cannot download binary."
         return 1
     fi
 
-    print_status "Extracting and installing to $install_dir..."
-    cd "$tmpdir"
-    tar -xzf "$archive_file"
+    print_status "Installing to $install_dir..."
+    chmod +x "$binary_file"
 
     if [[ $EUID -eq 0 ]]; then
-        cp amp "$install_dir/amp"
-        chmod +x "$install_dir/amp"
+        cp "$binary_file" "$install_dir/amp"
     else
-        cp amp "$install_dir/amp"
-        chmod +x "$install_dir/amp"
+        cp "$binary_file" "$install_dir/amp"
 
         # Add to PATH if not already there
         if [[ ":$PATH:" != *":$install_dir:"* ]]; then

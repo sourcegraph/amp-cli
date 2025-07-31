@@ -69,11 +69,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Note: Actual publishing would require API key
-      # - name: Publish to Chocolatey
-      #   run: |
-      #     cd chocolatey
-      #     choco push amp.${{ github.event.release.tag_name ||
-      #       github.event.inputs.version }}.nupkg
-      #       -s https://push.chocolatey.org/
-      #       -k ${{ secrets.CHOCOLATEY_API_KEY }}
+      - name: Publish to Chocolatey
+        run: |
+          cd chocolatey
+          choco push amp.${{ github.event.release.tag_name ||
+            github.event.inputs.version || github.event.client_payload.version }}.nupkg
+            -s https://push.chocolatey.org/
+            -k ${{ secrets.CHOCO_PUBLISH_TOKEN }}

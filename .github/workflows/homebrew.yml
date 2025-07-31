@@ -60,16 +60,16 @@ jobs:
           sed -i '' "s/sha256 '[^']*'/sha256 'REPLACE_WITH_PLACEHOLDER'/g" Formula/amp.rb
 
           # Restore specific SHA256 placeholders in order
-          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/{\
-            s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/;}' Formula/amp.rb
-          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/{\
-            s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/;}' Formula/amp.rb
-          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/{\
-            s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_AMD64_SHA256/;}' Formula/amp.rb
-          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/{\
-            s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_ARM64_SHA256/;}' Formula/amp.rb
-          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/{\
-            s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_AMD64_SHA256/;}' Formula/amp.rb
+          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/' \
+            Formula/amp.rb
+          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_ARM64_SHA256/' \
+            Formula/amp.rb
+          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_DARWIN_AMD64_SHA256/' \
+            Formula/amp.rb
+          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_ARM64_SHA256/' \
+            Formula/amp.rb
+          sed -i '' '0,/REPLACE_WITH_PLACEHOLDER/s/REPLACE_WITH_PLACEHOLDER/REPLACE_WITH_LINUX_AMD64_SHA256/' \
+            Formula/amp.rb
 
           # Now replace placeholders with actual values
           sed -i '' "s/VERSION_PLACEHOLDER/$version/g" Formula/amp.rb

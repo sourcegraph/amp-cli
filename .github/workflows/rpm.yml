@@ -59,7 +59,8 @@ jobs:
 
           # Set up RPM build environment
           mkdir -p ~/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
-          cp amp-${version}.tar.gz ~/rpmbuild/SOURCES/
+          # Copy with RPM-compatible filename
+          cp amp-${version}.tar.gz ~/rpmbuild/SOURCES/amp-${rpm_version}.tar.gz
           cp rpm/amp.spec ~/rpmbuild/SPECS/
 
           # Build RPM

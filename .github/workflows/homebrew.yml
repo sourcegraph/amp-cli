@@ -28,9 +28,38 @@ jobs:
             github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
+          # Download binaries and calculate checksums
+          echo "Downloading binaries to calculate checksums..."
+          curl -fsSL -o amp-darwin-arm64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-darwin-arm64"
+          curl -fsSL -o amp-darwin-x64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-darwin-x64"
+          curl -fsSL -o amp-linux-arm64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-arm64"
+          curl -fsSL -o amp-linux-x64 "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-linux-x64"
+
+          # Calculate SHA256 checksums
+          darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64 | cut -d' ' -f1)
+          darwin_x64_sha=$(shasum -a 256 amp-darwin-x64 | cut -d' ' -f1)
+          linux_arm64_sha=$(shasum -a 256 amp-linux-arm64 | cut -d' ' -f1)
+          linux_x64_sha=$(shasum -a 256 amp-linux-x64 | cut -d' ' -f1)
+
+          echo "Checksums calculated:"
+          echo "Darwin ARM64: $darwin_arm64_sha"
+          echo "Darwin x64: $darwin_x64_sha" 
+          echo "Linux ARM64: $linux_arm64_sha"
+          echo "Linux x64: $linux_x64_sha"
+
           # Update version and URLs in formula
           sed -i '' "s/version \".*\"/version \"$version\"/" Formula/amp.rb
-          sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" Formula/amp.rb
+          sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" Formula/amp.rb
+          
+          # Update SHA256 checksums
+          sed -i '' "s/REPLACE_WITH_ACTUAL_SHA256/$darwin_arm64_sha/" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_ARM64_SHA256/$darwin_arm64_sha/" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_AMD64_SHA256/$darwin_x64_sha/" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" Formula/amp.rb
+          sed -i '' "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/" Formula/amp.rb
+
+          # Clean up downloaded files
+          rm -f amp-darwin-arm64 amp-darwin-x64 amp-linux-arm64 amp-linux-x64
 
       - name: Commit updated formula
         run: |

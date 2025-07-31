@@ -13,21 +13,21 @@
         
         # Map system to release architecture
         archMap = {
-          "x86_64-linux" = "linux-amd64";
+          "x86_64-linux" = "linux-x64";
           "aarch64-linux" = "linux-arm64";
-          "x86_64-darwin" = "darwin-amd64";
+          "x86_64-darwin" = "darwin-x64";
           "aarch64-darwin" = "darwin-arm64";
         };
         
         arch = archMap.${system} or (throw "Unsupported system: ${system}");
         
-        version = "1.0.0";
+        version = "0.0.1753935578-gd618e6";
         
         # These will need to be updated with actual SHA256 hashes
         shaMap = {
-          "linux-amd64" = "REPLACE_WITH_LINUX_AMD64_SHA256";
+          "linux-x64" = "REPLACE_WITH_LINUX_X64_SHA256";
           "linux-arm64" = "REPLACE_WITH_LINUX_ARM64_SHA256";
-          "darwin-amd64" = "REPLACE_WITH_DARWIN_AMD64_SHA256";
+          "darwin-x64" = "REPLACE_WITH_DARWIN_X64_SHA256";
           "darwin-arm64" = "REPLACE_WITH_DARWIN_ARM64_SHA256";
         };
 
@@ -37,7 +37,7 @@
           inherit version;
 
           src = pkgs.fetchurl {
-            url = "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-${arch}.tar.gz";
+            url = "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-${arch}";
             sha256 = shaMap.${arch};
           };
 
@@ -50,7 +50,7 @@
             runHook preInstall
             
             mkdir -p $out/bin
-            cp amp $out/bin/
+            cp $src $out/bin/amp
             chmod +x $out/bin/amp
             
             # Create wrapper to ensure ripgrep is in PATH

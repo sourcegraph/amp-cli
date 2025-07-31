@@ -74,7 +74,7 @@ jobs:
 
           # Update PKGBUILD
           sed -i "s/pkgver=.*/pkgver=$version/" PKGBUILD
-          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v$version/g" PKGBUILD
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" PKGBUILD
           sed -i \
             "s/sha256sums_x86_64=.*/sha256sums_x86_64=('${{
             steps.checksums.outputs.amd64_sha }}')/" PKGBUILD

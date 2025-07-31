@@ -72,6 +72,8 @@ jobs:
           # Copy the debian/control and extract only the Package section
           awk '/^Package:/{pkg=1} pkg && /^$/{exit} pkg{print}' debian/control > DEBIAN/control
           sed -i "s/Architecture: .*/Architecture: ${{ matrix.arch }}/" DEBIAN/control
+          # Replace debhelper placeholders with actual dependencies
+          sed -i "s/\${shlibs:Depends}, \${misc:Depends}, //" DEBIAN/control
           echo "Installed-Size: $size" >> DEBIAN/control
 
           # Build package

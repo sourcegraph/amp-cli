@@ -53,10 +53,15 @@ jobs:
           echo "Darwin x64: $darwin_x64_sha"
           echo "Darwin ARM64: $darwin_arm64_sha"
 
-          # Update version in flake.nix
-          sed -i "s/REPLACE_WITH_VERSION/$version/" flake.nix
+          # First restore placeholders to ensure consistency every time
+          sed -i 's/version = "[^"]*";/version = "REPLACE_WITH_VERSION";/' flake.nix
+          sed -i 's/"linux-x64" = "[^"]*"/"linux-x64" = "REPLACE_WITH_LINUX_X64_SHA256"/' flake.nix
+          sed -i 's/"linux-arm64" = "[^"]*"/"linux-arm64" = "REPLACE_WITH_LINUX_ARM64_SHA256"/' flake.nix
+          sed -i 's/"darwin-x64" = "[^"]*"/"darwin-x64" = "REPLACE_WITH_DARWIN_X64_SHA256"/' flake.nix
+          sed -i 's/"darwin-arm64" = "[^"]*"/"darwin-arm64" = "REPLACE_WITH_DARWIN_ARM64_SHA256"/' flake.nix
 
-          # Update SHA256 checksums
+          # Now replace placeholders with actual values
+          sed -i "s/REPLACE_WITH_VERSION/$version/" flake.nix
           sed -i "s/REPLACE_WITH_LINUX_X64_SHA256/$linux_x64_sha/" flake.nix
           sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" flake.nix
           sed -i "s/REPLACE_WITH_DARWIN_X64_SHA256/$darwin_x64_sha/" flake.nix

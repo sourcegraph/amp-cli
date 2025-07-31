@@ -105,6 +105,4 @@ jobs:
             github.event.inputs.version || github.event.client_payload.version }}"
           $originalVersion = $originalVersion -replace '^v', ''
           $cleanVersion = $originalVersion -replace '-g[a-f0-9]+$', ''
-          choco push amp.$cleanVersion.nupkg
-            -s https://push.chocolatey.org/
-            -k ${{ secrets.CHOCO_PUBLISH_TOKEN }}
+          choco push amp.$cleanVersion.nupkg -s https://push.chocolatey.org/ -k ${{ secrets.CHOCO_PUBLISH_TOKEN }}

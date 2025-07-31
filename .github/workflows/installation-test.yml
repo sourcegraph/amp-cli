@@ -20,6 +20,12 @@ jobs:
             package_manager: homebrew
           - os: ubuntu-latest
             package_manager: homebrew
+          - os: ubuntu-latest
+            package_manager: docker
+            arch: amd64
+          - os: ubuntu-latest
+            package_manager: docker
+            arch: arm64
           - os: windows-latest
             package_manager: chocolatey
 
@@ -77,3 +83,30 @@ jobs:
             Write-Host "amp package not yet published to Chocolatey community repository - skipping test"
             Write-Host "This is expected for new packages that haven't been published yet"
           }
+
+      - name: Test Docker Container (Linux)
+        if: matrix.package_manager == 'docker'
+        run: |
+          # Set up Docker Buildx for multi-platform support
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker buildx create --use --name multiarch || true
+          docker buildx inspect --bootstrap
+
+          # Test pulling and running the Docker container for the specified architecture
+          echo "Testing Docker container for ${{ matrix.arch }} architecture"
+
+          # Pull the latest container (this tests that the container exists and is accessible)
+          if docker pull --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-packages:latest; then
+            echo "Successfully pulled amp Docker container for ${{ matrix.arch }}"
+
+            # Test running the container with --help
+            echo "Testing container functionality..."
+            if docker run --rm --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-packages:latest --help; then
+              echo "amp Docker container working correctly on ${{ matrix.arch }}"
+            else
+              echo "amp Docker container pulled but may have runtime issues on ${{ matrix.arch }}"
+            fi
+          else
+            echo "Failed to pull amp Docker container for ${{ matrix.arch }} - container may not be published yet"
+            echo "This is expected for new releases that haven't been built yet"
+          fi

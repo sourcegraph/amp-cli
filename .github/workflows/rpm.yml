@@ -75,7 +75,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amp-${{ matrix.arch }}.rpm
-          path: ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm
+          path: ~/rpmbuild/RPMS/*/amp-*.rpm
 
       - name: Attach RPM to GitHub Release
         run: |
@@ -84,6 +84,6 @@ jobs:
           if [[ ! "$version" =~ ^v ]]; then
             version="v${version}"
           fi
-          gh release upload "$version" ~/rpmbuild/RPMS/${{ matrix.arch }}/amp-*.rpm --clobber
+          gh release upload "$version" ~/rpmbuild/RPMS/*/amp-*.rpm --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

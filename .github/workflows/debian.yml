@@ -99,20 +99,20 @@ jobs:
           EOF
 
           # Build package
-          dpkg-deb --build . ../amp_${version}-1_${{ matrix.arch }}.deb
+          dpkg-deb --build . amp_${version}-1_${{ matrix.arch }}.deb
 
           # Sign the package
           gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
             --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
-            --armor --detach-sign ../amp_${version}-1_${{ matrix.arch }}.deb
+            --armor --detach-sign amp_${version}-1_${{ matrix.arch }}.deb
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: amp-${{ matrix.arch }}.deb
           path: |
-            ../amp_*_${{ matrix.arch }}.deb
-            ../amp_*_${{ matrix.arch }}.deb.asc
+            amp_*_${{ matrix.arch }}.deb
+            amp_*_${{ matrix.arch }}.deb.asc
 
       - name: Attach DEB to GitHub Release
         run: |
@@ -121,6 +121,6 @@ jobs:
           if [[ ! "$version" =~ ^v ]]; then
             version="v${version}"
           fi
-          gh release upload "$version" ../amp_*_${{ matrix.arch }}.deb ../amp_*_${{ matrix.arch }}.deb.asc --clobber
+          gh release upload "$version" amp_*_${{ matrix.arch }}.deb amp_*_${{ matrix.arch }}.deb.asc --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

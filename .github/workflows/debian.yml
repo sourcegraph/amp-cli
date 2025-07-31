@@ -69,7 +69,9 @@ jobs:
           size=$(du -k usr/bin/amp | cut -f1)
 
           # Create control file with correct architecture
-          sed "s/Architecture: .*/Architecture: ${{ matrix.arch }}/" debian/control > DEBIAN/control
+          # Copy the debian/control and extract only the Package section
+          awk '/^Package:/{pkg=1} pkg && /^$/{exit} pkg{print}' debian/control > DEBIAN/control
+          sed -i "s/Architecture: .*/Architecture: ${{ matrix.arch }}/" DEBIAN/control
           echo "Installed-Size: $size" >> DEBIAN/control
 
           # Build package

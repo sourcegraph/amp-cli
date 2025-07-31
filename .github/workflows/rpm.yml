@@ -53,8 +53,9 @@ jobs:
             github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
-          # Update spec version
-          sed -i "s/Version:.*/Version: ${version}/" rpm/amp.spec
+          # Update spec version (replace hyphens with dots for RPM compatibility)
+          rpm_version=$(echo "${version}" | sed 's/-/./g')
+          sed -i "s/Version:.*/Version: ${rpm_version}/" rpm/amp.spec
 
           # Set up RPM build environment
           mkdir -p ~/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}

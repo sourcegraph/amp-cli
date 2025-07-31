@@ -12,8 +12,10 @@ RUN apt-get update && apt-get install -y \
     ripgrep \
     && rm -rf /var/lib/apt/lists/*
 
-# Install amp using the official install script
-RUN curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-packages/main/install.sh | bash
+# Install amp binary directly
+ARG AMP_VERSION=0.0.1753952694-g23a9cc
+RUN curl -fsSL -o /usr/local/bin/amp "https://github.com/sourcegraph/amp-packages/releases/download/v${AMP_VERSION}/amp-linux-x64" \
+    && chmod +x /usr/local/bin/amp
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash amp

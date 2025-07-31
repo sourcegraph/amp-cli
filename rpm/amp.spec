@@ -10,6 +10,10 @@ Source0:        amp-%{version}.tar.gz
 BuildArch:      x86_64 aarch64
 Requires:       ripgrep
 
+# Skip binary stripping for cross-compiled binaries
+%global __strip /bin/true
+%global __os_install_post %{nil}
+
 %description
 Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
 It provides intelligent code suggestions, error detection, and automated refactoring capabilities.

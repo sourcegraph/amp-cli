@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Wait for release assets to stabilize
         run: sleep 60  # Wait 1 minute
@@ -63,56 +63,56 @@ jobs:
     steps:
 
       - name: Trigger AUR package update
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "aur.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Chocolatey package update
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "chocolatey.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Debian package build
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "debian.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Docker image build
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "docker.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Homebrew formula update
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "homebrew.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Nix package update
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "nix.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger RPM package build
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
           client-payload: '{"workflow": "rpm.yml", "version": "${{ env.RELEASE_VERSION }}"}'
 
       - name: Trigger Winget package update
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator
@@ -128,7 +128,7 @@ jobs:
         run: sleep 300  # Wait 5 minutes for builds to complete
 
       - name: Trigger repository builds
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: release-orchestrator

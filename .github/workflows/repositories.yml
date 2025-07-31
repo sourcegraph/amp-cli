@@ -25,7 +25,7 @@ jobs:
       github.event_name == 'repository_dispatch'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup GPG
         env:
@@ -41,28 +41,28 @@ jobs:
           fi
 
       - name: Download Debian artifacts
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
         with:
           workflow: debian.yml
           name: amp-amd64.deb
           path: artifacts/
 
       - name: Download Debian artifacts (arm64)
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
         with:
           workflow: debian.yml
           name: amp-arm64.deb
           path: artifacts/
 
       - name: Download RPM artifacts
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
         with:
           workflow: rpm.yml
           name: amp-x86_64.rpm
           path: artifacts/
 
       - name: Download RPM artifacts (aarch64)
-        uses: dawidd6/action-download-artifact@v11
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
         with:
           workflow: rpm.yml
           name: amp-aarch64.rpm
@@ -130,7 +130,7 @@ jobs:
 
       # Authenticate to Google using Workload Identity
       - name: gcloud auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
         with:
           # https://github.com/sourcegraph/infrastructure/tree/main/managed-services/amp-publishing-pipeline
           # https://console.cloud.google.com/iam-admin/workload-identity-pools/pool/amp-publishing-provider?inv=1&invt=AbyCAQ&project=sourcegraph-dev
@@ -141,7 +141,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
 
       - name: Deploy repositories to GCP bucket
         run: |

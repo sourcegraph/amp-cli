@@ -25,7 +25,7 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up architecture
         run: |
@@ -111,7 +111,7 @@ jobs:
             --armor --detach-sign amp_${version}-1_${{ matrix.arch }}.deb
 
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: amp-${{ matrix.arch }}.deb
           path: |

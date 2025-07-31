@@ -4,27 +4,27 @@
 class Amp < Formula
   desc 'Amp CLI - AI-powered coding assistant'
   homepage 'https://github.com/sourcegraph/amp-packages'
-  url 'https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/amp-darwin-arm64'
-  sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
-  version 'VERSION_PLACEHOLDER'
+  url '  https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753984723-gda0d4e/amp-darwin-arm64'
+  sha256 'REPLACE_WITH_PLACEHOLDER'
+  version '0.0.1753984723-gda0d4e'
 
   on_macos do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/amp-darwin-arm64'
-      sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
+      url '  https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753984723-gda0d4e/amp-darwin-arm64'
+      sha256 'REPLACE_WITH_PLACEHOLDER'
     else
-      url 'https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/amp-darwin-x64'
-      sha256 'REPLACE_WITH_DARWIN_AMD64_SHA256'
+      url '  https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753984723-gda0d4e/amp-darwin-x64'
+      sha256 'REPLACE_WITH_PLACEHOLDER'
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/amp-linux-arm64'
-      sha256 'REPLACE_WITH_LINUX_ARM64_SHA256'
+      url '  https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753984723-gda0d4e/amp-linux-arm64'
+      sha256 'REPLACE_WITH_PLACEHOLDER'
     else
-      url 'https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/amp-linux-x64'
-      sha256 'REPLACE_WITH_LINUX_AMD64_SHA256'
+      url '  https://github.com/sourcegraph/amp-packages/releases/download/v0.0.1753984723-gda0d4e/amp-linux-x64'
+      sha256 'REPLACE_WITH_PLACEHOLDER'
     end
   end
 

@@ -65,7 +65,7 @@ jobs:
           if ($searchResult -match "^amp\|") {
             Write-Host "amp package found in Chocolatey community repository"
             choco install amp -y
-            amp --help || Write-Host "amp binary installed but may have terminal compatibility issues in CI"
+            try { amp --help } catch { Write-Host "amp binary installed but may have terminal compatibility issues in CI" }
             choco uninstall amp -y
           } else {
             Write-Host "amp package not yet published to Chocolatey community repository - skipping test"

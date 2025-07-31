@@ -28,7 +28,7 @@
           "linux-x64" = "d1fa512f3e6ab2a82ac8886746cd7549231cd7aaf6d7db05352c211e6408cf9b";
           "linux-arm64" = "64a985094e21ebb1306a56da5a2b443f19fe629f489bf9840eef14edc2d073df";
           "darwin-x64" = "a7d60dce6a5d17f4e7442a58e1354c489d38b1a03908cda642404bcc337a73e6";
-          "darwin-arm64" = "";
+          "darwin-arm64" = "da71ce4c2822c6827a5ea71ab031b4c112dcaa1a8d4002129cbbec14ae2bf42c";
         };
 
       in

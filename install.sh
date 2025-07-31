@@ -268,19 +268,6 @@ install_chocolatey() {
     return 0
 }
 
-# Install using winget (Windows)
-install_winget() {
-    print_status "Installing via winget..."
-
-    if ! command_exists winget; then
-        print_error "winget is not installed."
-        return 1
-    fi
-
-    winget install Sourcegraph.Amp
-    return 0
-}
-
 # Manual binary installation
 install_manual() {
     print_status "Installing manually via binary download..."
@@ -459,12 +446,10 @@ main() {
 
     elif [[ $OS == "windows" ]]; then
         # Windows
-        if install_winget; then
-            print_success "Successfully installed Amp via winget!"
-        elif install_chocolatey; then
+        if install_chocolatey; then
             print_success "Successfully installed Amp via Chocolatey!"
         else
-            print_error "Failed to install Amp. Please install manually using winget or Chocolatey."
+            print_error "Failed to install Amp. Please install manually using Chocolatey."
             exit 1
         fi
 

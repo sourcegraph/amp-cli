@@ -58,24 +58,7 @@ function Get-Architecture {
     }
 }
 
-# Install using winget
-function Install-WithWinget {
-    Write-Info "Installing via winget..."
 
-    if (-not (Test-Command "winget")) {
-        Write-Error "winget is not installed or not available."
-        return $false
-    }
-
-    try {
-        winget install Sourcegraph.Amp --accept-source-agreements --accept-package-agreements
-        return $true
-    }
-    catch {
-        Write-Error "Failed to install via winget: $($_.Exception.Message)"
-        return $false
-    }
-}
 
 # Install using Chocolatey
 function Install-WithChocolatey {
@@ -243,13 +226,8 @@ function Main {
         # Try installation methods in order of preference
         $installed = $false
 
-        # Try winget first (Windows 10+)
-        if (Install-WithWinget) {
-            Write-Success "Successfully installed Amp via winget!"
-            $installed = $true
-        }
-        # Try Chocolatey
-        elseif (Install-WithChocolatey) {
+        # Try Chocolatey (Windows)
+        if (Install-WithChocolatey) {
             Write-Success "Successfully installed Amp via Chocolatey!"
             $installed = $true
         }
@@ -268,7 +246,7 @@ function Main {
             Write-Info "Manual installation options:"
             Write-Info "1. Download from: https://github.com/sourcegraph/amp-packages/releases"
             Write-Info "2. Install Chocolatey: https://chocolatey.org/install"
-            Write-Info "3. Install winget: Available on Windows 10+ via Microsoft Store"
+            Write-Info "3. Install Scoop: https://scoop.sh/"
             exit 1
         }
 

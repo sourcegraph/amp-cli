@@ -41,7 +41,7 @@
         description = "Format shell scripts with shfmt";
       };
 
-      # YAML validation (GitHub Actions, winget manifests)
+      # YAML validation (GitHub Actions manifests)
       yamllint = {
         enable = true;
         files = "\\.(yml|yaml)$";

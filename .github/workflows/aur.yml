@@ -48,7 +48,7 @@ jobs:
           version="${version#v}"
 
           # Download release files to calculate checksums
-          gh release download "v${version}" --repo sourcegraph/amp-cli \
+          gh release download "v${version}" --repo sourcegraph/amp-packages \
             --pattern "amp-linux-x64" --pattern "amp-linux-arm64"
 
           # Calculate SHA256 checksums

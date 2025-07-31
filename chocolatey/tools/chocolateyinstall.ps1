@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'amp'
 $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64 = 'https://github.com/sourcegraph/amp-cli/releases/download/v1.0.0/amp-windows-amd64.zip'
+$url64 = 'https://github.com/sourcegraph/amp-packages/releases/download/v1.0.0/amp-windows-amd64.zip'
 $checksum64 = 'REPLACE_WITH_WINDOWS_AMD64_SHA256'
 
 $packageArgs = @{

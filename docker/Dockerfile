@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install amp using the official install script
-RUN curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.sh | bash
+RUN curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-packages/main/install.sh | bash
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash amp

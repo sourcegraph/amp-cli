@@ -42,10 +42,10 @@ fi
 # Sign repository if GPG key is available
 if [ -n "$GPG_KEY_ID" ]; then
     echo "Signing repository with GPG key: $GPG_KEY_ID"
-    
+
     # Sign the repomd.xml file
     gpg --default-key "$GPG_KEY_ID" --detach-sign --armor "$REPO_DIR/repodata/repomd.xml"
-    
+
     # Also sign individual RPM files if not already signed
     for rpm_file in "$REPO_DIR"/*.rpm; do
         if [ -f "$rpm_file" ]; then
@@ -53,7 +53,7 @@ if [ -n "$GPG_KEY_ID" ]; then
             rpm --addsign "$rpm_file" || echo "Warning: Failed to sign $(basename "$rpm_file")"
         fi
     done
-    
+
     # Recreate metadata after signing
     if command -v createrepo_c >/dev/null 2>&1; then
         createrepo_c --update "$REPO_DIR"
@@ -66,13 +66,13 @@ fi
 
 # Create .repo file template
 echo "Creating repository configuration template..."
-cat > "$REPO_DIR/amp-cli.repo" <<EOF
+cat >"$REPO_DIR/amp-cli.repo" <<EOF
 [amp-cli]
 name=Amp CLI Repository
-baseurl=https://github.com/sourcegraph/amp-cli/releases/download/rpm/
+baseurl=https://github.com/sourcegraph/amp-packages/releases/download/rpm/
 enabled=1
 gpgcheck=1
-gpgkey=https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc
+gpgkey=https://github.com/sourcegraph/amp-packages/releases/download/gpg/amp-cli.asc
 EOF
 
 echo "RPM repository built successfully!"

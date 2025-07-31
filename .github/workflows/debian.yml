@@ -42,7 +42,7 @@ jobs:
             asset_name="amp-linux-arm64"
           fi
 
-          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/${asset_name}"
+          wget "https://github.com/sourcegraph/amp-packages/releases/download/v${version}/${asset_name}"
           chmod +x ${asset_name}
 
           # Create directory structure for debian packaging

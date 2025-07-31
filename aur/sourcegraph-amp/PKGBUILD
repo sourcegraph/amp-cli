@@ -5,14 +5,14 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc="AI-powered coding assistant CLI tool (binary)"
 arch=('x86_64' 'aarch64')
-url="https://github.com/sourcegraph/amp-cli"
+url="https://github.com/sourcegraph/amp-packages"
 license=('MIT')
 depends=('ripgrep')
 provides=('amp')
 conflicts=('amp')
 
-source_x86_64=("${pkgname}-${pkgver}-x86_64::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-x64")
-source_aarch64=("${pkgname}-${pkgver}-aarch64::https://github.com/sourcegraph/amp-cli/releases/download/v${pkgver}/amp-linux-arm64")
+source_x86_64=("${pkgname}-${pkgver}-x86_64::https://github.com/sourcegraph/amp-packages/releases/download/v${pkgver}/amp-linux-x64")
+source_aarch64=("${pkgname}-${pkgver}-aarch64::https://github.com/sourcegraph/amp-packages/releases/download/v${pkgver}/amp-linux-arm64")
 
 sha256sums_x86_64=('REPLACE_WITH_LINUX_AMD64_SHA256')
 sha256sums_aarch64=('REPLACE_WITH_LINUX_ARM64_SHA256')

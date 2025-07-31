@@ -6,13 +6,13 @@ PackageVersion: 1.0.0
 PackageLocale: en-US
 Publisher: Sourcegraph
 PublisherUrl: https://sourcegraph.com
-PublisherSupportUrl: https://github.com/sourcegraph/amp-cli/issues
+PublisherSupportUrl: https://github.com/sourcegraph/amp-packages/issues
 # PrivacyUrl:
 Author: Sourcegraph
 PackageName: Amp CLI
-PackageUrl: https://github.com/sourcegraph/amp-cli
+PackageUrl: https://github.com/sourcegraph/amp-packages
 License: MIT
-LicenseUrl: https://github.com/sourcegraph/amp-cli/blob/main/LICENSE
+LicenseUrl: https://github.com/sourcegraph/amp-packages/blob/main/LICENSE
 # Copyright:
 # CopyrightUrl:
 ShortDescription: AI-powered coding assistant CLI tool
@@ -21,14 +21,14 @@ Description: |-
   It provides intelligent code suggestions, error detection, and automated refactoring capabilities.
 Moniker: amp
 Tags:
-- ai
-- cli
-- coding
-- development
-- assistant
-- productivity
+  - ai
+  - cli
+  - coding
+  - development
+  - assistant
+  - productivity
 # ReleaseNotes:
-ReleaseNotesUrl: https://github.com/sourcegraph/amp-cli/releases/tag/v1.0.0
+ReleaseNotesUrl: https://github.com/sourcegraph/amp-packages/releases/tag/v1.0.0
 # PurchaseUrl:
 # InstallationNotes:
 # Documentations:

@@ -38,7 +38,7 @@
           inherit version;
 
           src = pkgs.fetchurl {
-            url = "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-${arch}";
+            url = "https://github.com/sourcegraph/amp-packages/releases/download/v${version}/amp-${arch}";
             sha256 = shaMap.${arch};
           };
 
@@ -65,7 +65,7 @@
 
           meta = with pkgs.lib; {
             description = "AI-powered coding assistant CLI tool";
-            homepage = "https://github.com/sourcegraph/amp-cli";
+            homepage = "https://github.com/sourcegraph/amp-packages";
             license = licenses.mit; # Update with actual license
             maintainers = [ ];
             platforms = platforms.unix;

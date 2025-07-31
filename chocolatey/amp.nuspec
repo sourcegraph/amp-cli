@@ -3,18 +3,18 @@
   <metadata>
     <id>amp</id>
     <version>1.0.0</version>
-    <packageSourceUrl>https://github.com/sourcegraph/amp-cli/tree/main/chocolatey</packageSourceUrl>
+    <packageSourceUrl>https://github.com/sourcegraph/amp-packages/tree/main/chocolatey</packageSourceUrl>
     <owners>Sourcegraph</owners>
     <title>Amp CLI</title>
     <authors>Sourcegraph</authors>
-    <projectUrl>https://github.com/sourcegraph/amp-cli</projectUrl>
+    <projectUrl>https://github.com/sourcegraph/amp-packages</projectUrl>
     <iconUrl>https://avatars.githubusercontent.com/u/3979584?s=200&amp;v=4</iconUrl>
     <copyright>2024 Sourcegraph</copyright>
-    <licenseUrl>https://github.com/sourcegraph/amp-cli/blob/main/LICENSE</licenseUrl>
+    <licenseUrl>https://github.com/sourcegraph/amp-packages/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <projectSourceUrl>https://github.com/sourcegraph/amp-cli</projectSourceUrl>
-    <docsUrl>https://github.com/sourcegraph/amp-cli/blob/main/README.md</docsUrl>
-    <bugTrackerUrl>https://github.com/sourcegraph/amp-cli/issues</bugTrackerUrl>
+    <projectSourceUrl>https://github.com/sourcegraph/amp-packages</projectSourceUrl>
+    <docsUrl>https://github.com/sourcegraph/amp-packages/blob/main/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/sourcegraph/amp-packages/issues</bugTrackerUrl>
     <tags>ai cli coding development assistant productivity</tags>
     <dependencies>
       <dependency id="ripgrep" version="14.0.0" />
@@ -35,7 +35,7 @@ It provides intelligent code suggestions, error detection, and automated refacto
 
 After installation, use `amp --help` to see available commands.
 ]]></description>
-    <releaseNotes>https://github.com/sourcegraph/amp-cli/releases/tag/v1.0.0</releaseNotes>
+    <releaseNotes>https://github.com/sourcegraph/amp-packages/releases/tag/v1.0.0</releaseNotes>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />

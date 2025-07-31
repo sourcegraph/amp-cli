@@ -54,9 +54,12 @@ jobs:
 
           # First restore placeholders to ensure consistency
           sed -i '' "s/version '[^']*'/version 'VERSION_PLACEHOLDER'/" Formula/amp.rb
-          sed -i '' "s|https://github.com/sourcegraph/amp-packages/releases/download/v[^/]*/|\
-            https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/|g" \
+
+          # Store replacement URL without whitespace
+          replacement_url="https://github.com/sourcegraph/amp-packages/releases/download/vVERSION_PLACEHOLDER/"
+          sed -i '' "s|https://github.com/sourcegraph/amp-packages/releases/download/v[^/]*/|$replacement_url|g" \
             Formula/amp.rb
+
           sed -i '' "s/sha256 '[^']*'/sha256 'REPLACE_WITH_PLACEHOLDER'/g" Formula/amp.rb
 
           # Restore specific SHA256 placeholders by line numbers to ensure correct placement

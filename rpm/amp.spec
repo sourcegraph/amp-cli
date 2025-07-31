@@ -7,7 +7,7 @@ License:        MIT
 URL:            https://github.com/sourcegraph/amp-packages
 Source0:        amp-%{version}.tar.gz
 
-BuildArch:      x86_64 aarch64
+# BuildArch is determined by the target architecture
 Requires:       ripgrep
 
 # Skip binary stripping for cross-compiled binaries

@@ -89,7 +89,7 @@ jobs:
             echo "GPG key not found, will be created manually"
 
       - name: Upload repositories to release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             debian-repo.tar.gz

@@ -49,6 +49,13 @@ jobs:
           mkdir -p usr/bin
           cp ${asset_name} usr/bin/amp
 
+      - name: Setup GPG
+        run: |
+          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+        env:
+          GPG_TTY: $(tty)
+
       - name: Build .deb package
         run: |
           version="${{ github.event.release.tag_name ||
@@ -68,22 +75,44 @@ jobs:
           # Calculate installed size (in KB)
           size=$(du -k usr/bin/amp | cut -f1)
 
-          # Create control file with correct architecture
-          # Copy the debian/control and extract only the Package section
-          awk '/^Package:/{pkg=1} pkg && /^$/{exit} pkg{print}' debian/control > DEBIAN/control
-          sed -i "s/Architecture: .*/Architecture: ${{ matrix.arch }}/" DEBIAN/control
-          # Replace debhelper placeholders with actual dependencies
-          sed -i "s/\${shlibs:Depends}, \${misc:Depends}, //" DEBIAN/control
-          echo "Installed-Size: $size" >> DEBIAN/control
+          # Create proper control file
+          cat > DEBIAN/control << EOF
+          Package: amp
+          Version: ${version}-1
+          Architecture: ${{ matrix.arch }}
+          Maintainer: Sourcegraph <support@sourcegraph.com>
+          Depends: ripgrep
+          Installed-Size: $size
+          Section: utils
+          Priority: optional
+          Homepage: https://github.com/sourcegraph/amp-packages
+          Description: AI-powered coding assistant CLI tool
+           Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
+           It provides intelligent code suggestions, error detection, and automated refactoring capabilities.
+           .
+           Features:
+            - AI-powered code suggestions
+            - Error detection and fixing
+            - Automated refactoring
+            - Cross-platform support
+            - Easy command-line interface
+          EOF
 
           # Build package
           dpkg-deb --build . ../amp_${version}-1_${{ matrix.arch }}.deb
+
+          # Sign the package
+          gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
+            --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
+            --armor --detach-sign ../amp_${version}-1_${{ matrix.arch }}.deb
 
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: amp-${{ matrix.arch }}.deb
-          path: ../amp_*_${{ matrix.arch }}.deb
+          path: |
+            ../amp_*_${{ matrix.arch }}.deb
+            ../amp_*_${{ matrix.arch }}.deb.asc
 
       - name: Attach DEB to GitHub Release
         run: |
@@ -92,6 +121,6 @@ jobs:
           if [[ ! "$version" =~ ^v ]]; then
             version="v${version}"
           fi
-          gh release upload "$version" ../amp_*_${{ matrix.arch }}.deb --clobber
+          gh release upload "$version" ../amp_*_${{ matrix.arch }}.deb ../amp_*_${{ matrix.arch }}.deb.asc --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

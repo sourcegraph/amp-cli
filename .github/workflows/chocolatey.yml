@@ -93,12 +93,12 @@ jobs:
 
       - name: Attach Chocolatey Package to GitHub Release
         run: |
-          version="${{ github.event.release.tag_name ||
+          $version = "${{ github.event.release.tag_name ||
             github.event.inputs.version || github.event.client_payload.version }}"
-          if [[ ! "$version" =~ ^v ]]; then
-            version="v${version}"
-          fi
-          gh release upload "$version" chocolatey/amp.*.nupkg --clobber
+          if (-not $version.StartsWith('v')) {
+            $version = "v$version"
+          }
+          gh release upload $version chocolatey/amp.*.nupkg --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -39,6 +39,8 @@ jobs:
 
       - name: Calculate release checksums
         id: checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ github.event.release.tag_name ||
             github.event.inputs.version ||

@@ -28,6 +28,8 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Update Nix flake
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version="${{ github.event.release.tag_name ||
             github.event.inputs.version || github.event.client_payload.version }}"

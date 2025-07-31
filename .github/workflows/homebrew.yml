@@ -49,8 +49,9 @@ jobs:
           echo "Linux x64: $linux_x64_sha"
 
           # Update version and URLs in formula
+          sed -i '' "s/VERSION_PLACEHOLDER/$version/g" Formula/amp.rb
           sed -i '' "s/version \".*\"/version \"$version\"/" Formula/amp.rb
-          sed -i '' "s/v[0-9]\+\.[0-9]\+\.[0-9a-zA-Z\.\-]\+/v$version/g" Formula/amp.rb
+          sed -i '' "s/vVERSION_PLACEHOLDER/v$version/g" Formula/amp.rb
 
           # Update SHA256 checksums with standardized placeholder names
           sed -i '' "s/REPLACE_WITH_DARWIN_ARM64_SHA256/$darwin_arm64_sha/g" Formula/amp.rb

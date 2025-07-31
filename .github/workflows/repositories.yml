@@ -29,28 +29,28 @@ jobs:
           echo "GPG_KEY_ID=${{ secrets.GPG_KEY_ID }}" >> $GITHUB_ENV
 
       - name: Download Debian artifacts
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: debian.yml
           name: amp-amd64.deb
           path: artifacts/
 
       - name: Download Debian artifacts (arm64)
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: debian.yml
           name: amp-arm64.deb
           path: artifacts/
 
       - name: Download RPM artifacts
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: rpm.yml
           name: amp-x86_64.rpm
           path: artifacts/
 
       - name: Download RPM artifacts (aarch64)
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v11
         with:
           workflow: rpm.yml
           name: amp-aarch64.rpm

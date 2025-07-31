@@ -28,6 +28,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rpm build-essential
 
+      - name: Setup GPG
+        run: |
+          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+        env:
+          GPG_TTY: $(tty)
+
       - name: Download release binary
         run: |
           version="${{ github.event.release.tag_name ||
@@ -71,11 +78,22 @@ jobs:
           echo "Listing rpmbuild RPMS directory structure:"
           find ~/rpmbuild/RPMS -type f -name "*.rpm" || echo "No RPM files found"
 
+          # Sign the RPM package
+          for rpm_file in ~/rpmbuild/RPMS/*/amp-*.rpm; do
+            if [ -f "$rpm_file" ]; then
+              gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
+                --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
+                --armor --detach-sign "$rpm_file"
+            fi
+          done
+
       - name: Upload .rpm artifact
         uses: actions/upload-artifact@v4
         with:
           name: amp-${{ matrix.arch }}.rpm
-          path: ~/rpmbuild/RPMS/*/amp-*.rpm
+          path: |
+            ~/rpmbuild/RPMS/*/amp-*.rpm
+            ~/rpmbuild/RPMS/*/amp-*.rpm.asc
 
       - name: Attach RPM to GitHub Release
         run: |
@@ -84,6 +102,6 @@ jobs:
           if [[ ! "$version" =~ ^v ]]; then
             version="v${version}"
           fi
-          gh release upload "$version" ~/rpmbuild/RPMS/*/amp-*.rpm --clobber
+          gh release upload "$version" ~/rpmbuild/RPMS/*/amp-*.rpm ~/rpmbuild/RPMS/*/amp-*.rpm.asc --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

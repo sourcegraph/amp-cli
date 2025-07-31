@@ -20,6 +20,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup GPG (Ubuntu subsystem)
+        shell: bash
+        run: |
+          # Install GPG in Windows Subsystem for Linux (WSL) Ubuntu
+          wsl --install --no-distribution
+          wsl --set-default-version 2
+          wsl --install Ubuntu --no-launch
+          wsl -d Ubuntu -e bash -c "apt-get update && apt-get install -y gnupg"
+
+          # Import GPG keys
+          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | wsl -d Ubuntu -e gpg --batch --import
+          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | wsl -d Ubuntu -e gpg --batch --import
+
       - name: Install Chocolatey
         run: |
           Set-ExecutionPolicy Bypass -Scope Process -Force
@@ -70,6 +83,20 @@ jobs:
           cd chocolatey
           choco pack
 
+      - name: Sign chocolatey package
+        shell: bash
+        run: |
+          cd chocolatey
+          for nupkg_file in amp.*.nupkg; do
+            if [ -f "$nupkg_file" ]; then
+              wsl -d Ubuntu -e bash -c "cd /mnt/c/\$(pwd | sed 's|C:|/mnt/c|' | sed 's|\\\\|/|g') && \
+                gpg --batch --yes --pinentry-mode loopback \
+                --passphrase '${{ secrets.DEB_GPG_PASSWORD }}' \
+                --default-key '${{ secrets.DEB_GPG_KEY_ID }}' \
+                --armor --detach-sign '\$nupkg_file'"
+            fi
+          done
+
       - name: Test chocolatey package
         run: |
           cd chocolatey
@@ -89,7 +116,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amp-chocolatey.nupkg
-          path: chocolatey/amp.*.nupkg
+          path: |
+            chocolatey/amp.*.nupkg
+            chocolatey/amp.*.nupkg.asc
 
       - name: Attach Chocolatey Package to GitHub Release
         run: |
@@ -98,7 +127,7 @@ jobs:
           if (-not $version.StartsWith('v')) {
             $version = "v$version"
           }
-          gh release upload $version chocolatey/amp.*.nupkg --clobber
+          gh release upload $version chocolatey/amp.*.nupkg chocolatey/amp.*.nupkg.asc --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

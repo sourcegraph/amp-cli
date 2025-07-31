@@ -6,11 +6,49 @@ on:
     types: [published]
 
 jobs:
-  orchestrate-packaging:
+  sign-binaries:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Wait for release assets to stabilize
         run: sleep 180  # Wait 3 minutes
+
+      - name: Setup GPG
+        run: |
+          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+        env:
+          GPG_TTY: $(tty)
+
+      - name: Download and sign release binaries
+        run: |
+          version="${{ github.event.release.tag_name }}"
+
+          # Download all binary assets
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          # Sign all downloaded binaries
+          cd binaries
+          for binary in amp-*; do
+            if [ -f "$binary" ]; then
+              echo "Signing binary: $binary"
+              gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
+                --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
+                --armor --detach-sign "$binary"
+            fi
+          done
+
+          # Upload signature files to the release
+          gh release upload "$version" *.asc --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  orchestrate-packaging:
+    runs-on: ubuntu-latest
+    needs: sign-binaries
+    steps:
 
       - name: Trigger AUR package update
         uses: peter-evans/repository-dispatch@v3
@@ -70,7 +108,7 @@ jobs:
 
   orchestrate-repositories:
     runs-on: ubuntu-latest
-    needs: orchestrate-packaging
+    needs: [sign-binaries, orchestrate-packaging]
     steps:
       - name: Wait for package builds to complete
         run: sleep 300  # Wait 5 minutes for builds to complete

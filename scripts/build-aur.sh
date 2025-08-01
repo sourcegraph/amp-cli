@@ -26,7 +26,7 @@ cat > ~/.ssh/config <<EOF
 Host aur.archlinux.org
   User aur
   IdentityFile ~/.ssh/aur
-  StrictHostKeyChecking yes
+  StrictHostKeyChecking no
 EOF
 
 # Download release files to calculate checksums

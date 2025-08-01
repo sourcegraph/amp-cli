@@ -252,7 +252,7 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
 
-  upload-binaries:
+  upload-deb-and-rpm-binaries-to-gcs:
     runs-on: ubuntu-latest
     needs: [gpg-sign-binaries, build-packages]
     if: |
@@ -277,7 +277,7 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
 
-      - name: Download and upload binaries to GCS
+      - name: Download and upload deb/rpm binaries to GCS
         run: |
           version="${{ env.RELEASE_VERSION }}"
 
@@ -286,48 +286,11 @@ jobs:
 
           cd binaries
 
-          # Upload Windows binaries and signatures
-          for file in amp-*windows*; do
+          # Upload all deb/rpm binaries and signatures to versioned directory
+          for file in amp-*deb* amp*rpm*; do
             if [ -f "$file" ]; then
-              echo "Uploading Windows binary: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/windows/"
-            fi
-          done
-
-          for file in amp-*windows*.asc; do
-            if [ -f "$file" ]; then
-              echo "Uploading Windows signature: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/windows/"
-            fi
-          done
-
-          # Upload Linux binaries and signatures
-          for file in amp-*linux*; do
-            if [ -f "$file" ]; then
-              echo "Uploading Linux binary: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/linux/"
-            fi
-          done
-
-          for file in amp-*linux*.asc; do
-            if [ -f "$file" ]; then
-              echo "Uploading Linux signature: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/linux/"
-            fi
-          done
-
-          # Upload Darwin binaries and signatures
-          for file in amp-*darwin*; do
-            if [ -f "$file" ]; then
-              echo "Uploading Darwin binary: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/darwin/"
-            fi
-          done
-
-          for file in amp-*darwin*.asc; do
-            if [ -f "$file" ]; then
-              echo "Uploading Darwin signature: $file"
-              gsutil cp "$file" "gs://packages.ampcode.com/darwin/"
+              echo "Uploading: $file"
+              gcloud storage cp "$file" "gs://packages.ampcode.com/binaries/$version/" --project=amp-prod-0
             fi
           done
         env:

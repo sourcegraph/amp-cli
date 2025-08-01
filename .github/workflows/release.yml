@@ -418,6 +418,10 @@ jobs:
             -h "Cache-Control:public, max-age=300" \
             gs://packages.ampcode.com/index.html || true
 
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/manifest.json || true
+
           gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
             -h "Cache-Control:public, max-age=86400" \
             "gs://packages.ampcode.com/gpg/*.asc" || true
@@ -427,3 +431,6 @@ jobs:
 
           gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
             "gs://packages.ampcode.com/rpm/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/binaries/**" || true

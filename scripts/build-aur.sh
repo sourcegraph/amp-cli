@@ -280,6 +280,11 @@ fi
 echo "Entering aur-repo directory..."
 cd aur-repo
 echo "Current directory: $(pwd)"
+
+# Trust this repo even though it's owned by a different user
+git config --global --add safe.directory "$(pwd)"
+echo "Added safe directory configuration for git"
+
 echo "Directory contents:"
 ls -la
 echo ""

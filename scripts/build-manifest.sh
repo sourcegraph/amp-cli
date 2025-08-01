@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-VERSION="$1"
-VERSION="${VERSION#v}"
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 MANIFEST_FILE="$PROJECT_ROOT/repository/manifest.json"
@@ -46,7 +43,7 @@ for i in {1..5}; do
 
   # Add and commit changes
   git add "$MANIFEST_FILE"
-  if git commit -m "Update Manifest to v$VERSION"; then
+  if git commit -m "Update manifest with latest releases"; then
     # Try to push
     if git push; then
       echo "Successfully pushed changes on attempt $i"

@@ -9,12 +9,12 @@ echo "Building Homebrew formula for version $VERSION"
 # Download binaries and calculate checksums
 echo "Downloading binaries to calculate checksums..."
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \
-  --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64" \
+  --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64.zip" \
   --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
 
 # Calculate SHA256 checksums
-darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64 | cut -d' ' -f1)
-darwin_x64_sha=$(shasum -a 256 amp-darwin-x64 | cut -d' ' -f1)
+darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64.zip | cut -d' ' -f1)
+darwin_x64_sha=$(shasum -a 256 amp-darwin-x64.zip | cut -d' ' -f1)
 linux_arm64_sha=$(shasum -a 256 amp-linux-arm64 | cut -d' ' -f1)
 linux_x64_sha=$(shasum -a 256 amp-linux-x64 | cut -d' ' -f1)
 

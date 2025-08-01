@@ -320,6 +320,17 @@ echo ""
 # Commit and push changes
 echo "Adding files to git..."
 git add PKGBUILD .SRCINFO
+
+# Check if there are any changes to commit
+if git diff --cached --quiet; then
+  echo "No changes detected – AUR package already at version $VERSION"
+  echo ""
+  echo "==============================================="
+  echo "AUR BUILD COMPLETED (NO CHANGES NEEDED)"
+  echo "==============================================="
+  exit 0
+fi
+
 echo "Git status:"
 git status
 echo ""

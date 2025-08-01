@@ -4,16 +4,16 @@
 class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
   homepage 'https://ampcode.com'
-  url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64'
+  url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64.zip'
   sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
   version 'VERSION_PLACEHOLDER'
 
   on_macos do
     if Hardware::CPU.arm?
-      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64.zip'
       sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
     else
-      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-x64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-x64.zip'
       sha256 'REPLACE_WITH_DARWIN_AMD64_SHA256'
     end
   end

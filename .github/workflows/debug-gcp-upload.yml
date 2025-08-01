@@ -1,0 +1,60 @@
+---
+name: Debug GCP Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Test message to include in the file'
+        required: false
+        default: 'Debug test from GitHub Actions'
+        type: string
+
+jobs:
+  debug-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Create test file
+        run: |
+          echo "Debug test file" > debug-test.txt
+          echo "Timestamp: $(date)" >> debug-test.txt
+          echo "GitHub Run ID: ${{ github.run_id }}" >> debug-test.txt
+          echo "User message: ${{ inputs.test_message }}" >> debug-test.txt
+          echo "Repository: ${{ github.repository }}" >> debug-test.txt
+          echo "Ref: ${{ github.ref }}" >> debug-test.txt
+          cat debug-test.txt
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
+      - name: Test GCP authentication
+        run: |
+          echo "Testing GCP authentication..."
+          gcloud auth list
+          gcloud config list
+
+      - name: Upload test file to GCS
+        run: |
+          echo "Uploading test file to packages.ampcode.com bucket..."
+          gsutil cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"
+          echo "Upload completed successfully!"
+
+      - name: Verify upload
+        run: |
+          echo "Verifying upload..."
+          gsutil ls "gs://packages.ampcode.com/debug/"
+          echo "File details:"
+          gsutil stat "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"

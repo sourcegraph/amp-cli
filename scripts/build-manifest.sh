@@ -1,6 +1,8 @@
 #!/bin/bash
-
 set -euo pipefail
+
+VERSION="$1"
+VERSION="${VERSION#v}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"

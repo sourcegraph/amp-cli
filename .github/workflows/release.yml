@@ -97,29 +97,18 @@ jobs:
 
           cd binaries
 
-          # Upload Darwin binaries and signatures
-          for file in amp-*darwin*; do
+          # Upload all binaries and signatures to versioned directory
+          for file in amp-*; do
             if [ -f "$file" ]; then
-              echo "Uploading Darwin binary: $file"
-              gcloud storage cp "$file" "gs://packages.ampcode.com/darwin/" --project=amp-prod-0
+              echo "Uploading: $file"
+              gcloud storage cp "$file" "gs://packages.ampcode.com/binaries/$version/" --project=amp-prod-0
             fi
           done
 
-          # Upload Windows binaries and signatures
-          for file in amp-*windows* *.nupkg; do
-            if [ -f "$file" ]; then
-              echo "Uploading Windows binary: $file"
-              gcloud storage cp "$file" "gs://packages.ampcode.com/windows/" --project=amp-prod-0
-            fi
-          done
-
-          # Upload Linux binaries and signatures
-          for file in amp-*linux*; do
-            if [ -f "$file" ]; then
-              echo "Uploading Linux binary: $file"
-              gcloud storage cp "$file" "gs://packages.ampcode.com/linux/" --project=amp-prod-0
-            fi
-          done
+          # Upload index.html to root
+          cd ..
+          echo "Uploading index.html"
+          gcloud storage cp repository/index.html "gs://packages.ampcode.com/" --project=amp-prod-0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

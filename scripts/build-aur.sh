@@ -26,7 +26,7 @@ cat > ~/.ssh/config <<EOF
 Host aur.archlinux.org
   User aur
   IdentityFile ~/.ssh/aur
-  StrictHostKeyChecking no
+  StrictHostKeyChecking yes
 EOF
 
 # Download release files to calculate checksums
@@ -44,17 +44,17 @@ echo "ARM64 SHA: $arm64_sha"
 rm amp-linux-*
 
 # Copy template to PKGBUILD and update with version and checksums
-cp aur/ampcode-com/PKGBUILD.template aur/ampcode-com/PKGBUILD
-sed -i "s/REPLACE_WITH_VERSION/$VERSION/g" aur/ampcode-com/PKGBUILD
-sed -i "s/REPLACE_WITH_LINUX_AMD64_SHA256/$amd64_sha/g" aur/ampcode-com/PKGBUILD
-sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$arm64_sha/g" aur/ampcode-com/PKGBUILD
+cp aur/ampcode/PKGBUILD.template aur/ampcode/PKGBUILD
+sed -i "s/REPLACE_WITH_VERSION/$VERSION/g" aur/ampcode/PKGBUILD
+sed -i "s/REPLACE_WITH_LINUX_AMD64_SHA256/$amd64_sha/g" aur/ampcode/PKGBUILD
+sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$arm64_sha/g" aur/ampcode/PKGBUILD
 
 # Clone AUR repository
-git clone ssh://aur@aur.archlinux.org/ampcode-com.git aur-repo
+git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo
 cd aur-repo
 
 # Copy our updated PKGBUILD to the AUR repo
-cp ../aur/ampcode-com/PKGBUILD ./PKGBUILD
+cp ../aur/ampcode/PKGBUILD ./PKGBUILD
 
 # Generate new .SRCINFO
 makepkg --printsrcinfo > .SRCINFO
@@ -107,7 +107,7 @@ for i in {1..5}; do
   git pull origin main || true
 
   # Add and commit changes
-  git add aur/ampcode-com/
+  git add aur/ampcode/
   if git commit -m "Update AUR package to $VERSION with checksums"; then
     # Try to push
     if git push; then

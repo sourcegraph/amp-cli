@@ -69,8 +69,8 @@ if [ -n "$GITHUB_TOKEN" ]; then
 fi
 
 # Create a flake.lock file to avoid GitHub API calls during check
-nix flake lock --no-update-lock-file || true
-nix flake check --no-update-lock-file
+nix flake lock
+nix flake check
 nix build .#amp
 
 # Configure git and commit changes

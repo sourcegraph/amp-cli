@@ -67,30 +67,13 @@ gh release upload "$version_tag" \
   release-assets/gpg/amp-cli.asc \
   --clobber
 
-# Index.html is already available as a static file in repository/
-echo "Using static index.html for repository listing"
-
-# Deploy to GCP bucket (if GCP authentication is set up)
+# Deploy to GCP bucket
 if command -v gsutil >/dev/null 2>&1; then
   echo "Uploading repository files to gs://packages.ampcode.com/"
-  gsutil -m rsync -r -d repository/ gs://packages.ampcode.com/
-
-  # Set appropriate content types and cache headers
-  gsutil -m setmeta -h "Content-Type:text/html" \
-    -h "Cache-Control:public, max-age=300" \
-    gs://packages.ampcode.com/index.html || true
-
-  gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
-    -h "Cache-Control:public, max-age=86400" \
-    "gs://packages.ampcode.com/gpg/*.asc" || true
-
-  gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
-    "gs://packages.ampcode.com/debian/**" || true
-
-  gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
-    "gs://packages.ampcode.com/rpm/**" || true
+  gsutil -m rsync -r repository/ gs://packages.ampcode.com/
 
   echo "Repository deployment completed successfully"
 else
-  echo "Warning: gsutil not available, skipping GCP deployment"
+  echo "Error: gsutil not available"
+  exit 1
 fi

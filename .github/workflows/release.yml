@@ -386,3 +386,51 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  set-gcs-metadata:
+    runs-on: ubuntu-latest
+    needs: [upload-deb-and-rpm-binaries-to-gcs, build-packages, upload-manifest-to-gcs]
+    if: |
+      always() &&
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
+      - name: Set content types and cache headers
+        run: |
+          # Set appropriate content types and cache headers
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/index.html || true
+
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/manifest.json || true
+
+          gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
+            -h "Cache-Control:public, max-age=86400" \
+            "gs://packages.ampcode.com/gpg/*.asc" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/debian/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/rpm/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=86400" \
+            "gs://packages.ampcode.com/binaries/**" || true

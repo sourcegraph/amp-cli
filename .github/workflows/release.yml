@@ -106,8 +106,15 @@ jobs:
           done
 
           # Upload index.html to root
-          echo "Uploading index.html"
-          gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0
+          echo "Checking for index.html..."
+          ls -la "${GITHUB_WORKSPACE}/"
+          ls -la "${GITHUB_WORKSPACE}/repository/" || echo "repository directory not found"
+          if [ -f "${GITHUB_WORKSPACE}/repository/index.html" ]; then
+            echo "Uploading index.html"
+            gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0
+          else
+            echo "index.html not found at expected path"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

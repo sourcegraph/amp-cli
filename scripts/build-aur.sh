@@ -18,21 +18,36 @@ if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
   exit 1
 fi
 
-# SSH setup -------------------------------------------------------------
+# SSH setup with verbose debugging -----------------------------------
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/aur
 chmod 600 ~/.ssh/aur
-# record current host key
-ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts
+
+echo "SSH key setup complete. Testing SSH key format..."
+ssh-keygen -l -f ~/.ssh/aur || echo "SSH key format check failed"
+
+# record current host key with verbose output
+echo "Running ssh-keyscan for aur.archlinux.org..."
+ssh-keyscan -v -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts 2>&1
+
+echo "Contents of known_hosts:"
+cat ~/.ssh/known_hosts
 
 cat > ~/.ssh/config <<EOF
 Host aur.archlinux.org
   User                 aur
   IdentityFile         ~/.ssh/aur
   IdentitiesOnly       yes
-  StrictHostKeyChecking accept-new
+  StrictHostKeyChecking no
   UserKnownHostsFile   ~/.ssh/known_hosts
+  LogLevel             DEBUG3
 EOF
+
+echo "SSH config created:"
+cat ~/.ssh/config
+
+echo "Testing SSH connection with verbose output..."
+ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org 2>&1 || echo "SSH test failed as expected"
 
 # Download release files to calculate checksums
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \

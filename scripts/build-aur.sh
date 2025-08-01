@@ -16,6 +16,9 @@ pacman -Syu --noconfirm git openssh github-cli sudo
 useradd -m -G wheel builder
 echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
+# Change ownership of workspace to builder user
+chown -R builder:builder /github/workspace 2>/dev/null || chown -R builder:builder $(pwd)
+
 # Setup SSH for AUR
 if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
   echo "AUR_SSH_PRIVATE_KEY environment variable not set"

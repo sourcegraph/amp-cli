@@ -18,10 +18,13 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      - name: Setup devenv
-        uses: cachix/devenv-action@ad4000265227aea85a719bda3fb9613528e7595b # v76
+      - name: Setup Cachix
+        uses: cachix/cachix-action@18cf96c7c98e048e10a83abd92116114cd8504be # v14
         with:
-          devenv-root: .
+          name: devenv
+
+      - name: Install devenv
+        run: nix profile install nixpkgs#devenv
 
       - name: Run tests
         run: devenv shell test-install-script

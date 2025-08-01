@@ -41,7 +41,7 @@ jobs:
 
           # Download binaries and calculate checksums
           echo "Downloading binaries to calculate checksums..."
-          gh release download "v${version}" --repo sourcegraph/amp-packages \
+          gh release download "v${version}" --repo sourcegraph/amp-cli \
             --pattern "amp-linux-x64" --pattern "amp-linux-arm64" \
             --pattern "amp-darwin-x64" --pattern "amp-darwin-arm64"
 
@@ -57,14 +57,10 @@ jobs:
           echo "Darwin x64: $darwin_x64_sha"
           echo "Darwin ARM64: $darwin_arm64_sha"
 
-          # First restore placeholders to ensure consistency every time
-          sed -i 's/version = "[^"]*";/version = "REPLACE_WITH_VERSION";/' flake.nix
-          sed -i 's/"linux-x64" = "[^"]*"/"linux-x64" = "REPLACE_WITH_LINUX_X64_SHA256"/' flake.nix
-          sed -i 's/"linux-arm64" = "[^"]*"/"linux-arm64" = "REPLACE_WITH_LINUX_ARM64_SHA256"/' flake.nix
-          sed -i 's/"darwin-x64" = "[^"]*"/"darwin-x64" = "REPLACE_WITH_DARWIN_X64_SHA256"/' flake.nix
-          sed -i 's/"darwin-arm64" = "[^"]*"/"darwin-arm64" = "REPLACE_WITH_DARWIN_ARM64_SHA256"/' flake.nix
+          # Copy template to working file
+          cp flake.nix.template flake.nix
 
-          # Now replace placeholders with actual values
+          # Replace placeholders with actual values
           sed -i "s/REPLACE_WITH_VERSION/$version/" flake.nix
           sed -i "s/REPLACE_WITH_LINUX_X64_SHA256/$linux_x64_sha/" flake.nix
           sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" flake.nix

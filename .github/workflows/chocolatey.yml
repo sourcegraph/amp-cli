@@ -63,7 +63,7 @@ jobs:
           $originalVersion = $originalVersion -replace '^v', ''
 
           # Download the Windows executable to calculate checksum
-          $windowsExeUrl = "https://github.com/sourcegraph/amp-packages/" +
+          $windowsExeUrl = "https://github.com/sourcegraph/amp-cli/" +
             "releases/download/v$originalVersion/amp-windows-x64.exe"
           Write-Host "Downloading Windows executable from: $windowsExeUrl"
           Invoke-WebRequest -Uri $windowsExeUrl -OutFile "amp-windows-x64.exe"

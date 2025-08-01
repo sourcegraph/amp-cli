@@ -51,7 +51,7 @@ jobs:
             asset_name="amp-linux-arm64"
           fi
 
-          wget "https://github.com/sourcegraph/amp-packages/releases/download/v${version}/${asset_name}"
+          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/${asset_name}"
           # Create a tar.gz file for the RPM build process with RPM-compatible directory name
           rpm_version=$(echo "${version}" | sed 's/-/./g')
           mkdir -p amp-${rpm_version}
@@ -67,7 +67,8 @@ jobs:
 
           # Update spec version (replace hyphens with dots for RPM compatibility)
           rpm_version=$(echo "${version}" | sed 's/-/./g')
-          sed -i "s/Version:.*/Version: ${rpm_version}/" rpm/amp.spec
+          cp rpm/amp.spec.template rpm/amp.spec
+          sed -i "s/REPLACE_WITH_VERSION/${rpm_version}/" rpm/amp.spec
 
           # Set up RPM build environment
           mkdir -p ~/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}

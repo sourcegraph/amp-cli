@@ -84,13 +84,13 @@ jobs:
 
       - name: Build Debian repository
         run: |
-          chmod +x scripts/build-debian-repo.sh
-          ./scripts/build-debian-repo.sh debs repository/debian
+          chmod +x ./repository/scripts/build-debian-repo.sh
+          ./repository/scripts/build-debian-repo.sh debs repository/debian
 
       - name: Build RPM repository
         run: |
-          chmod +x scripts/build-rpm-repo.sh
-          ./scripts/build-rpm-repo.sh rpms repository/rpm
+          chmod +x ./repository/scripts/build-rpm-repo.sh
+          ./repository/scripts/build-rpm-repo.sh rpms repository/rpm
 
       - name: Export GPG public key
         run: |

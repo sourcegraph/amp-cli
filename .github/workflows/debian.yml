@@ -46,7 +46,7 @@ jobs:
             asset_name="amp-linux-arm64"
           fi
 
-          wget "https://github.com/sourcegraph/amp-packages/releases/download/v${version}/${asset_name}"
+          wget "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/${asset_name}"
           chmod +x ${asset_name}
 
           # Create directory structure for debian packaging
@@ -66,8 +66,9 @@ jobs:
             github.event.inputs.version || github.event.client_payload.version }}"
           version="${version#v}"
 
-          # Update changelog version
-          sed -i "1s/amp (.*)/amp (${version}-1) unstable; urgency=medium/" debian/changelog
+          # Copy template and update changelog version
+          cp debian/changelog.template debian/changelog
+          sed -i "s/REPLACE_WITH_VERSION/${version}/" debian/changelog
 
           # Install build dependencies
           sudo apt-get update
@@ -89,7 +90,7 @@ jobs:
           Installed-Size: $size
           Section: utils
           Priority: optional
-          Homepage: https://github.com/sourcegraph/amp-packages
+          Homepage: https://github.com/sourcegraph/amp-cli
           Description: AI-powered coding assistant CLI tool
            Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
            It provides intelligent code suggestions, error detection, and automated refactoring capabilities.

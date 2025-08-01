@@ -2,7 +2,6 @@ FROM ubuntu:latest@sha256:a08e551cb33850e4740772b38217fc1796a66da2506d312abe51ac
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
-ENV AMP_VERSION=1.0.0
 
 # Update package list and install required packages
 RUN apt-get update && apt-get install -y \
@@ -15,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 # Install amp binary directly
 ARG AMP_VERSION=0.0.1753952694-g23a9cc
 ARG AMP_ARCH=x64
-RUN curl -fsSL -o /usr/local/bin/amp "https://github.com/sourcegraph/amp-packages/releases/download/${AMP_VERSION}/amp-linux-${AMP_ARCH}" \
+RUN curl -fsSL -o /usr/local/bin/amp "https://github.com/sourcegraph/amp-cli/releases/download/${AMP_VERSION}/amp-linux-${AMP_ARCH}" \
     && chmod +x /usr/local/bin/amp
 
 # Create a non-root user

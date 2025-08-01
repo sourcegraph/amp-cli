@@ -1,5 +1,5 @@
 # Amp CLI Windows Installer
-# Usage: iwr -useb https://raw.githubusercontent.com/sourcegraph/amp-packages/main/install.ps1 | iex
+# Usage: iwr -useb https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.ps1 | iex
 
 param(
     [string]$Version = "1.0.0"
@@ -91,7 +91,7 @@ function Install-WithScoop {
     try {
         # Add bucket if not already added
         try {
-            scoop bucket add sourcegraph https://github.com/sourcegraph/amp-packages
+            scoop bucket add sourcegraph https://github.com/sourcegraph/amp-cli
         }
         catch {
             # Bucket might already exist, continue
@@ -112,7 +112,7 @@ function Install-Manual {
 
     Write-Info "Installing manually via binary download..."
 
-    $binaryUrl = "https://github.com/sourcegraph/amp-packages/releases/download/v$Version/amp-windows-$Arch.zip"
+    $binaryUrl = "https://github.com/sourcegraph/amp-cli/releases/download/v$Version/amp-windows-$Arch.zip"
     $tempDir = [System.IO.Path]::GetTempPath()
     $zipFile = Join-Path $tempDir "amp-windows-$Arch.zip"
     $extractDir = Join-Path $tempDir "amp-extract"
@@ -244,7 +244,7 @@ function Main {
         else {
             Write-Error "All installation methods failed. Please install manually."
             Write-Info "Manual installation options:"
-            Write-Info "1. Download from: https://github.com/sourcegraph/amp-packages/releases"
+            Write-Info "1. Download from: https://github.com/sourcegraph/amp-cli/releases"
             Write-Info "2. Install Chocolatey: https://chocolatey.org/install"
             Write-Info "3. Install Scoop: https://scoop.sh/"
             exit 1

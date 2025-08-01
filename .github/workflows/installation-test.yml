@@ -49,17 +49,17 @@ jobs:
           fi
 
           # Tap the repository
-          brew tap sourcegraph/amp-packages https://github.com/sourcegraph/amp-packages
+          brew tap sourcegraph/amp-cli https://github.com/sourcegraph/amp-cli
 
           # Install amp from the specific tap
-          brew install sourcegraph/amp-packages/amp
+          brew install sourcegraph/amp-cli/amp
 
           # Test that amp is working (handle CI terminal issues)
           amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
 
           # Clean up
-          brew uninstall sourcegraph/amp-packages/amp
-          brew untap sourcegraph/amp-packages
+          brew uninstall sourcegraph/amp-cli/amp
+          brew untap sourcegraph/amp-cli
 
       - name: Test Chocolatey Installation (Windows)
         id: test-chocolatey
@@ -103,12 +103,12 @@ jobs:
           echo "Testing Docker container for ${{ matrix.arch }} architecture"
 
           # Pull the latest container (this tests that the container exists and is accessible)
-          if docker pull --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-packages:latest; then
+          if docker pull --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-cli:latest; then
             echo "Successfully pulled amp Docker container for ${{ matrix.arch }}"
 
             # Test running the container with --help
             echo "Testing container functionality..."
-            if docker run --rm --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-packages:latest --help; then
+            if docker run --rm --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-cli:latest --help; then
               echo "amp Docker container working correctly on ${{ matrix.arch }}"
             else
               echo "amp Docker container pulled but may have runtime issues on ${{ matrix.arch }}"

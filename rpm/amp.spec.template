@@ -1,5 +1,5 @@
 Name:           amp
-Version:        1.0.0
+Version:        REPLACE_WITH_VERSION
 Release:        1%{?dist}
 Summary:        AI-powered coding assistant CLI tool
 

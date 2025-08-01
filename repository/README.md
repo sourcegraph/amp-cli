@@ -67,39 +67,3 @@ repository/
    ```bash
    ./scripts/build-rpm-repo.sh ./rpms repository/rpm
    ```
-
-## Usage
-
-### Debian/Ubuntu
-
-Add repository:
-```bash
-curl -fsSL https://github.com/sourcegraph/amp-packages/releases/download/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
-echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://github.com/sourcegraph/amp-packages/releases/download/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
-sudo apt update
-sudo apt install amp
-```
-
-### RHEL/CentOS/Fedora
-
-Add repository:
-```bash
-sudo rpm --import https://github.com/sourcegraph/amp-packages/releases/download/gpg/amp-cli.asc
-sudo tee /etc/yum.repos.d/amp-cli.repo > /dev/null <<EOF
-[amp-cli]
-name=Amp CLI Repository
-baseurl=https://github.com/sourcegraph/amp-packages/releases/download/rpm/
-enabled=1
-gpgcheck=1
-gpgkey=https://github.com/sourcegraph/amp-packages/releases/download/gpg/amp-cli.asc
-EOF
-sudo dnf install amp  # or yum install amp
-```
-
-## GitHub Actions Integration
-
-The repositories are automatically built and published via GitHub Actions when:
-- A new release is published
-- The workflow is manually triggered
-
-See `.github/workflows/package-managers.yml` for implementation details.

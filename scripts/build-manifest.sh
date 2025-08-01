@@ -12,7 +12,7 @@ THIRTY_ONE_DAYS_AGO=$(date -u -d '31 days ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null
 
 # Use gh CLI to get all releases with pagination, filter by date, and format as JSON
 ALL_RELEASES=$(mktemp)
-gh release list --limit 1000 --json tagName,publishedAt,createdAt > "$ALL_RELEASES"
+gh release list --limit 1000 --json tagName,publishedAt,createdAt >"$ALL_RELEASES"
 
 jq --arg cutoff_date "$THIRTY_ONE_DAYS_AGO" '
   map(select(.publishedAt >= $cutoff_date or .createdAt >= $cutoff_date)) |
@@ -22,13 +22,12 @@ jq --arg cutoff_date "$THIRTY_ONE_DAYS_AGO" '
   }) |
   sort_by(.datetime) |
   reverse
-' "$ALL_RELEASES" > "$MANIFEST_FILE"
+' "$ALL_RELEASES" >"$MANIFEST_FILE"
 
 rm "$ALL_RELEASES"
 
 echo "Manifest created at $MANIFEST_FILE"
 echo "Found $(jq 'length' "$MANIFEST_FILE") releases from the last 31 days"
-
 
 # Configure git and commit changes
 git config --local user.email "amp@ampcode.com"
@@ -36,26 +35,26 @@ git config --local user.name "Amp"
 
 # Retry logic for concurrent workflow conflicts
 for i in {1..5}; do
-  echo "Attempt $i/5 to commit and push changes"
+    echo "Attempt $i/5 to commit and push changes"
 
-  # Pull latest changes
-  git pull origin main || true
+    # Pull latest changes
+    git pull origin main || true
 
-  # Add and commit changes
-  git add "$MANIFEST_FILE"
-  if git commit -m "Update manifest with latest releases"; then
-    # Try to push
-    if git push; then
-      echo "Successfully pushed changes on attempt $i"
-      exit 0
+    # Add and commit changes
+    git add "$MANIFEST_FILE"
+    if git commit -m "Update manifest with latest releases"; then
+        # Try to push
+        if git push; then
+            echo "Successfully pushed changes on attempt $i"
+            exit 0
+        else
+            echo "Push failed on attempt $i, retrying..."
+            sleep $((i * 2))
+        fi
     else
-      echo "Push failed on attempt $i, retrying..."
-      sleep $((i * 2))
+        echo "No changes to commit on attempt $i"
+        exit 0
     fi
-  else
-    echo "No changes to commit on attempt $i"
-    exit 0
-  fi
 done
 
 echo "Failed to push after 5 attempts"

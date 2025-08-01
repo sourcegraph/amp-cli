@@ -11,7 +11,6 @@
 
 # This script is based off https://github.com/rust-lang/rustup/blob/f8d7b3baba7a63237cb2b82ef49a68a37dd0633c/rustup-init.sh
 
-
 set -u
 
 # Script version
@@ -43,10 +42,10 @@ LOGO="
         .:lc,.    'cll:.  ..
          ...      .;lll,
                    .,,,.
-";
+"
 
 usage() {
-    cat << EOF
+    cat <<EOF
 amp-install ${SCRIPT_VERSION}
 
 USAGE:
@@ -105,7 +104,7 @@ doctor() {
     echo "amp-install ${SCRIPT_VERSION} - System Diagnostics"
     echo "=================================================="
     echo ""
-    
+
     # Basic system information
     echo "System Information:"
     echo "  OS: $(uname -s)"
@@ -118,13 +117,13 @@ doctor() {
     echo "  User: $(whoami)"
     echo "  Working Directory: $(pwd)"
     echo ""
-    
+
     # Detected architecture
     echo "Architecture Detection:"
     get_architecture
     echo "  Detected: $RETVAL"
     echo ""
-    
+
     # OS Detection
     echo "Operating System Detection:"
     if is_macos; then
@@ -132,44 +131,44 @@ doctor() {
     else
         echo "  macOS: ✗"
     fi
-    
+
     if is_windows; then
         echo "  Windows: ✓"
     else
         echo "  Windows: ✗"
     fi
-    
+
     if is_wsl; then
         echo "  WSL: ✓"
     else
         echo "  WSL: ✗"
     fi
-    
+
     if is_archlinux; then
         echo "  Arch Linux: ✓"
     else
         echo "  Arch Linux: ✗"
     fi
-    
+
     if is_nixos; then
         echo "  NixOS: ✓"
     else
         echo "  NixOS: ✗"
     fi
-    
+
     if is_debian; then
         echo "  Debian/Ubuntu: ✓"
     else
         echo "  Debian/Ubuntu: ✗"
     fi
-    
+
     if is_ubuntu; then
         echo "  Ubuntu: ✓"
     else
         echo "  Ubuntu: ✗"
     fi
     echo ""
-    
+
     # Package Managers
     echo "Package Managers:"
     if has_homebrew; then
@@ -177,38 +176,38 @@ doctor() {
     else
         echo "  Homebrew: ✗"
     fi
-    
+
     if has_nix; then
         echo "  Nix: ✓ ($(nix --version 2>/dev/null || nix-env --version 2>/dev/null | head -1))"
     else
         echo "  Nix: ✗"
     fi
-    
+
     if has_npm; then
         echo "  npm: ✓ ($(npm --version 2>/dev/null))"
     else
         echo "  npm: ✗"
     fi
-    
+
     if has_yarn; then
         echo "  yarn: ✓ ($(yarn --version 2>/dev/null))"
     else
         echo "  yarn: ✗"
     fi
-    
+
     if has_pnpm; then
         echo "  pnpm: ✓ ($(pnpm --version 2>/dev/null))"
     else
         echo "  pnpm: ✗"
     fi
-    
+
     if has_choco; then
         echo "  Chocolatey: ✓ ($(choco --version 2>/dev/null | head -1))"
     else
         echo "  Chocolatey: ✗"
     fi
     echo ""
-    
+
     # Required commands
     echo "Required Commands:"
     local _commands="curl wget mktemp chmod mkdir rm rmdir uname"
@@ -220,7 +219,7 @@ doctor() {
         fi
     done
     echo ""
-    
+
     # Environment Variables
     echo "Environment Variables:"
     echo "  AMP_BINARY_ROOT: ${AMP_BINARY_ROOT:-<default>}"
@@ -233,7 +232,7 @@ doctor() {
     echo "  TERM: ${TERM:-<not set>}"
     echo "  PATH: $PATH"
     echo ""
-    
+
     # Network connectivity test
     echo "Network Connectivity:"
     if command -v curl >/dev/null 2>&1; then
@@ -246,21 +245,21 @@ doctor() {
         echo "  Cannot test connectivity: curl not available"
     fi
     echo ""
-    
+
     # Download URL that would be used
     local _arch="$RETVAL"
     local _ext=""
     case "$_arch" in
-        *windows*)
-            _ext=".exe"
-            ;;
+    *windows*)
+        _ext=".exe"
+        ;;
     esac
     local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
     echo "Download Information:"
     echo "  Target URL: $_url"
     echo "  Binary name: amp${_ext}"
     echo ""
-    
+
     # Temporary directory test
     echo "System Tests:"
     local _test_dir
@@ -270,14 +269,14 @@ doctor() {
     else
         echo "  Temp directory creation: ✗"
     fi
-    
+
     # File permissions test
     if [ -w "$(pwd)" ]; then
         echo "  Current directory writable: ✓"
     else
         echo "  Current directory writable: ✗"
     fi
-    
+
     echo ""
     echo "Diagnostics complete. Share this output when reporting issues."
 }
@@ -288,35 +287,35 @@ main() {
     local dry_run=no
     for arg in "$@"; do
         case "$arg" in
-            --help|-h)
-                print_logo
-                usage
-                exit 0
-                ;;
-            --version|-V)
-                print_logo
-                version
-                exit 0
-                ;;
-            --doctor)
-                doctor
-                exit 0
-                ;;
-            --verbose|-v)
-                VERBOSE=1
-                ;;
-            --quiet|-q)
-                QUIET=1
-                ;;
-            --no-confirm)
-                need_tty=no
-                ;;
-            --dry-run)
-                dry_run=yes
-                ;;
-            *)
-                continue
-                ;;
+        --help | -h)
+            print_logo
+            usage
+            exit 0
+            ;;
+        --version | -V)
+            print_logo
+            version
+            exit 0
+            ;;
+        --doctor)
+            doctor
+            exit 0
+            ;;
+        --verbose | -v)
+            VERBOSE=1
+            ;;
+        --quiet | -q)
+            QUIET=1
+            ;;
+        --no-confirm)
+            need_tty=no
+            ;;
+        --dry-run)
+            dry_run=yes
+            ;;
+        *)
+            continue
+            ;;
         esac
     done
 
@@ -345,9 +344,9 @@ main() {
 
     local _ext=""
     case "$_arch" in
-        *windows*)
-            _ext=".exe"
-            ;;
+    *windows*)
+        _ext=".exe"
+        ;;
     esac
 
     local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
@@ -364,14 +363,12 @@ main() {
     if [ -t 2 ]; then
         if [ "${TERM+set}" = 'set' ]; then
             case "$TERM" in
-                xterm*|rxvt*|urxvt*|linux*|vt*)
-                    _ansi_escapes_are_valid=true
+            xterm* | rxvt* | urxvt* | linux* | vt*)
+                _ansi_escapes_are_valid=true
                 ;;
             esac
         fi
     fi
-
-
 
     if [ "$QUIET" -eq 0 ]; then
         if $_ansi_escapes_are_valid; then
@@ -406,7 +403,7 @@ main() {
             err "Unable to run interactively. Run with --dry-run to see what would be executed, --no-confirm to accept defaults, --help for additional options"
         fi
 
-        run_cmd "$_file" "$@" < /dev/tty
+        run_cmd "$_file" "$@" </dev/tty
     else
         run_cmd "$_file" "$@"
     fi
@@ -442,7 +439,7 @@ get_architecture() {
             # See: <https://support.apple.com/en-us/HT208436>
 
             # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
-            if sysctl hw.optional.x86_64 2> /dev/null || true | grep -q ': 1'; then
+            if sysctl hw.optional.x86_64 2>/dev/null || true | grep -q ': 1'; then
                 _cputype=x86_64
             fi
         elif [ "$_cputype" = x86_64 ]; then
@@ -451,39 +448,39 @@ get_architecture() {
             # Rosetta 2 is built exclusively for x86-64 and cannot run i386 binaries.
 
             # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
-            if sysctl hw.optional.arm64 2> /dev/null || true | grep -q ': 1'; then
+            if sysctl hw.optional.arm64 2>/dev/null || true | grep -q ': 1'; then
                 _cputype=arm64
             fi
         fi
     fi
 
     case "$_ostype" in
-        Linux)
-            _ostype=linux
-            ;;
+    Linux)
+        _ostype=linux
+        ;;
 
-        Darwin)
-            _ostype=darwin
-            ;;
+    Darwin)
+        _ostype=darwin
+        ;;
 
-        *)
-            err "unrecognized OS type: $_ostype"
-            ;;
+    *)
+        err "unrecognized OS type: $_ostype"
+        ;;
 
     esac
 
     case "$_cputype" in
-        aarch64 | arm64)
-            _cputype=aarch64
-            ;;
+    aarch64 | arm64)
+        _cputype=aarch64
+        ;;
 
-        x86_64 | x86-64 | x64 | amd64)
-            _cputype=x86_64
-            ;;
+    x86_64 | x86-64 | x64 | amd64)
+        _cputype=x86_64
+        ;;
 
-        *)
-            err "unknown CPU type: $_cputype"
-            ;;
+    *)
+        err "unknown CPU type: $_cputype"
+        ;;
 
     esac
 
@@ -516,7 +513,7 @@ need_cmd() {
 }
 
 check_cmd() {
-    command -v "$1" > /dev/null 2>&1
+    command -v "$1" >/dev/null 2>&1
 }
 
 assert_nz() {
@@ -557,14 +554,14 @@ print_logo() {
     # Only use colors if terminal supports them
     if [ -t 1 ] && [ "${TERM+set}" = 'set' ]; then
         case "$TERM" in
-            xterm*|rxvt*|urxvt*|linux*|vt*)
-                RED='\033[0;31m'
-                NC='\033[0m'
-                printf "${RED}${LOGO}${NC}\n"
-                ;;
-            *)
-                printf "${LOGO}\n"
-                ;;
+        xterm* | rxvt* | urxvt* | linux* | vt*)
+            RED='\033[0;31m'
+            NC='\033[0m'
+            printf "${RED}${LOGO}${NC}\n"
+            ;;
+        *)
+            printf "${LOGO}\n"
+            ;;
         esac
     else
         printf "${LOGO}\n"
@@ -616,12 +613,12 @@ is_ubuntu() {
 
 is_windows() {
     case "$(uname -s)" in
-        CYGWIN*|MINGW*|MSYS*)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
+    CYGWIN* | MINGW* | MSYS*)
+        return 0
+        ;;
+    *)
+        return 1
+        ;;
     esac
 }
 

@@ -9,8 +9,8 @@ echo "Building Homebrew formula for version $VERSION"
 # Download binaries and calculate checksums
 echo "Downloading binaries to calculate checksums..."
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \
-  --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64.zip" \
-  --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
+    --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64.zip" \
+    --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
 
 # Calculate SHA256 checksums
 darwin_arm64_sha=$(shasum -a 256 amp-darwin-arm64.zip | cut -d' ' -f1)
@@ -43,26 +43,26 @@ git config --local user.name "Amp"
 
 # Retry logic for concurrent workflow conflicts
 for i in {1..5}; do
-  echo "Attempt $i/5 to commit and push changes"
+    echo "Attempt $i/5 to commit and push changes"
 
-  # Pull latest changes
-  git pull origin main || true
+    # Pull latest changes
+    git pull origin main || true
 
-  # Add and commit changes
-  git add Formula/amp.rb
-  if git commit -m "Update Homebrew formula to v$VERSION"; then
-    # Try to push
-    if git push; then
-      echo "Successfully pushed changes on attempt $i"
-      exit 0
+    # Add and commit changes
+    git add Formula/amp.rb
+    if git commit -m "Update Homebrew formula to v$VERSION"; then
+        # Try to push
+        if git push; then
+            echo "Successfully pushed changes on attempt $i"
+            exit 0
+        else
+            echo "Push failed on attempt $i, retrying..."
+            sleep $((i * 2))
+        fi
     else
-      echo "Push failed on attempt $i, retrying..."
-      sleep $((i * 2))
+        echo "No changes to commit on attempt $i"
+        exit 0
     fi
-  else
-    echo "No changes to commit on attempt $i"
-    exit 0
-  fi
 done
 
 echo "Failed to push after 5 attempts"

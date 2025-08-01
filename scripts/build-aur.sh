@@ -36,7 +36,7 @@ echo ""
 # Create non-root user for makepkg (required by AUR)
 echo "Creating builder user for makepkg..."
 useradd -m -G wheel builder
-echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+echo 'builder ALL=(ALL) NOPASSWD: ALL' >>/etc/sudoers
 echo "Builder user created successfully"
 echo "Builder user info:"
 id builder
@@ -56,25 +56,25 @@ echo ""
 echo "Changing ownership of workspace to builder user..."
 echo "Attempting to change ownership of /github/workspace..."
 if chown -R builder:builder /github/workspace 2>/dev/null; then
-  echo "Successfully changed ownership to builder:builder for /github/workspace"
+    echo "Successfully changed ownership to builder:builder for /github/workspace"
 else
-  echo "Failed to change ownership of /github/workspace, trying current directory $(pwd)..."
-  if chown -R builder:builder $(pwd); then
-    echo "Successfully changed ownership to builder:builder for $(pwd)"
-  else
-    echo "Failed to change ownership of current directory"
-    exit 1
-  fi
+    echo "Failed to change ownership of /github/workspace, trying current directory $(pwd)..."
+    if chown -R builder:builder $(pwd); then
+        echo "Successfully changed ownership to builder:builder for $(pwd)"
+    else
+        echo "Failed to change ownership of current directory"
+        exit 1
+    fi
 fi
 echo ""
 
 # Setup SSH for AUR
 echo "Checking for AUR SSH private key..."
 if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
-  echo "ERROR: AUR_SSH_PRIVATE_KEY environment variable not set"
-  echo "Available environment variables:"
-  env | grep -i aur || echo "No AUR-related environment variables found"
-  exit 1
+    echo "ERROR: AUR_SSH_PRIVATE_KEY environment variable not set"
+    echo "Available environment variables:"
+    env | grep -i aur || echo "No AUR-related environment variables found"
+    exit 1
 fi
 echo "AUR_SSH_PRIVATE_KEY is set (length: ${#AUR_SSH_PRIVATE_KEY} characters)"
 echo ""
@@ -86,27 +86,27 @@ mkdir -p ~/.ssh && chmod 700 ~/.ssh
 echo "SSH directory created with permissions: $(ls -ld ~/.ssh)"
 
 echo "Writing SSH private key to file (not displaying content)..."
-echo "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/aur
+echo "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' >~/.ssh/aur
 chmod 600 ~/.ssh/aur
 echo "SSH key file created with permissions: $(ls -l ~/.ssh/aur)"
 
 echo "SSH key setup complete. Testing SSH key format..."
 if ssh-keygen -l -f ~/.ssh/aur; then
-  echo "SSH key format is valid"
+    echo "SSH key format is valid"
 else
-  echo "ERROR: SSH key format check failed"
-  echo "SSH key file size: $(wc -c < ~/.ssh/aur) bytes"
-  echo "SSH key first line (redacted): $(head -1 ~/.ssh/aur | sed 's/[a-zA-Z0-9+/=]/-/g')"
-  exit 1
+    echo "ERROR: SSH key format check failed"
+    echo "SSH key file size: $(wc -c <~/.ssh/aur) bytes"
+    echo "SSH key first line (redacted): $(head -1 ~/.ssh/aur | sed 's/[a-zA-Z0-9+/=]/-/g')"
+    exit 1
 fi
 
 # record current host key with verbose output
 echo "Running ssh-keyscan for aur.archlinux.org..."
-if ssh-keyscan -v -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts 2>&1; then
-  echo "SSH keyscan completed successfully"
+if ssh-keyscan -v -t ed25519,rsa aur.archlinux.org >>~/.ssh/known_hosts 2>&1; then
+    echo "SSH keyscan completed successfully"
 else
-  echo "ERROR: SSH keyscan failed"
-  exit 1
+    echo "ERROR: SSH keyscan failed"
+    exit 1
 fi
 
 echo "Contents of known_hosts:"
@@ -114,7 +114,7 @@ cat ~/.ssh/known_hosts
 echo ""
 
 echo "Creating SSH config file..."
-cat > ~/.ssh/config <<EOF
+cat >~/.ssh/config <<EOF
 Host aur.archlinux.org
   User                 aur
   IdentityFile         ~/.ssh/aur
@@ -134,10 +134,10 @@ echo ""
 echo "Testing SSH connection with verbose output..."
 echo "Running: ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org"
 if ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org 2>&1; then
-  echo "SSH connection test passed"
+    echo "SSH connection test passed"
 else
-  SSH_EXIT_CODE=$?
-  echo "SSH connection test failed with exit code: $SSH_EXIT_CODE (this may be expected for AUR)"
+    SSH_EXIT_CODE=$?
+    echo "SSH connection test failed with exit code: $SSH_EXIT_CODE (this may be expected for AUR)"
 fi
 echo ""
 
@@ -145,10 +145,10 @@ echo ""
 echo "Testing SSH with our specific key and settings..."
 echo "Running: ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -vvv -T aur@aur.archlinux.org"
 if ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -vvv -T aur@aur.archlinux.org 2>&1; then
-  echo "SSH key test passed"
+    echo "SSH key test passed"
 else
-  SSH_KEY_EXIT_CODE=$?
-  echo "SSH key test failed with exit code: $SSH_KEY_EXIT_CODE (this may be expected for AUR)"
+    SSH_KEY_EXIT_CODE=$?
+    echo "SSH key test failed with exit code: $SSH_KEY_EXIT_CODE (this may be expected for AUR)"
 fi
 echo ""
 
@@ -160,10 +160,10 @@ echo ""
 # Show public key for debugging
 echo "Extracting public key fingerprint from private key..."
 if ssh-keygen -y -f ~/.ssh/aur | ssh-keygen -lf -; then
-  echo "Public key extraction successful"
+    echo "Public key extraction successful"
 else
-  echo "ERROR: Could not extract public key from private key"
-  exit 1
+    echo "ERROR: Could not extract public key from private key"
+    exit 1
 fi
 echo ""
 
@@ -171,11 +171,11 @@ echo ""
 echo "Downloading release files for checksum calculation..."
 echo "Running: gh release download v${VERSION} --repo sourcegraph/amp-cli --pattern amp-linux-x64 --pattern amp-linux-arm64"
 if gh release download "v${VERSION}" --repo sourcegraph/amp-cli \
-  --pattern "amp-linux-x64" --pattern "amp-linux-arm64"; then
-  echo "Release files downloaded successfully"
+    --pattern "amp-linux-x64" --pattern "amp-linux-arm64"; then
+    echo "Release files downloaded successfully"
 else
-  echo "ERROR: Failed to download release files"
-  exit 1
+    echo "ERROR: Failed to download release files"
+    exit 1
 fi
 
 echo "Downloaded files:"
@@ -203,26 +203,26 @@ echo "PREPARING PKGBUILD"
 echo "==============================================="
 echo "Checking for PKGBUILD template..."
 if [ ! -d "aur/ampcode" ]; then
-  echo "ERROR: aur/ampcode directory not found"
-  echo "Current directory structure:"
-  find . -name "PKGBUILD*" -o -name "aur" -type d | head -20
-  exit 1
+    echo "ERROR: aur/ampcode directory not found"
+    echo "Current directory structure:"
+    find . -name "PKGBUILD*" -o -name "aur" -type d | head -20
+    exit 1
 fi
 
 ls -la aur/ampcode/
 echo ""
 
 if [ ! -f "aur/ampcode/PKGBUILD.template" ]; then
-  echo "ERROR: PKGBUILD.template not found"
-  exit 1
+    echo "ERROR: PKGBUILD.template not found"
+    exit 1
 fi
 
 echo "Copying PKGBUILD template..."
 if cp aur/ampcode/PKGBUILD.template aur/ampcode/PKGBUILD; then
-  echo "PKGBUILD template copied successfully"
+    echo "PKGBUILD template copied successfully"
 else
-  echo "ERROR: Failed to copy PKGBUILD template"
-  exit 1
+    echo "ERROR: Failed to copy PKGBUILD template"
+    exit 1
 fi
 
 echo "Updating PKGBUILD with version and checksums..."
@@ -249,32 +249,32 @@ echo ""
 echo "Attempting to clone AUR repository..."
 echo "Running: git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo"
 if git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo; then
-  echo "AUR repository cloned successfully"
+    echo "AUR repository cloned successfully"
 else
-  GIT_EXIT_CODE=$?
-  echo "ERROR: Failed to clone AUR repository (exit code: $GIT_EXIT_CODE)"
-  echo ""
-  echo "Debugging information:"
-  echo "GIT_SSH_COMMAND: $GIT_SSH_COMMAND"
-  echo "SSH configuration test:"
-  ssh -T aur@aur.archlinux.org 2>&1 || true
-  echo ""
-  echo "Network connectivity test:"
-  ping -c 3 aur.archlinux.org || true
-  echo ""
-  echo "DNS resolution test:"
-  nslookup aur.archlinux.org || true
-  exit 1
+    GIT_EXIT_CODE=$?
+    echo "ERROR: Failed to clone AUR repository (exit code: $GIT_EXIT_CODE)"
+    echo ""
+    echo "Debugging information:"
+    echo "GIT_SSH_COMMAND: $GIT_SSH_COMMAND"
+    echo "SSH configuration test:"
+    ssh -T aur@aur.archlinux.org 2>&1 || true
+    echo ""
+    echo "Network connectivity test:"
+    ping -c 3 aur.archlinux.org || true
+    echo ""
+    echo "DNS resolution test:"
+    nslookup aur.archlinux.org || true
+    exit 1
 fi
 echo ""
 
 # Change ownership of the cloned repo to builder user
 echo "Changing ownership of cloned repo to builder user..."
 if chown -R builder:builder aur-repo; then
-  echo "Successfully changed ownership of aur-repo to builder:builder"
+    echo "Successfully changed ownership of aur-repo to builder:builder"
 else
-  echo "ERROR: Failed to change ownership of aur-repo"
-  exit 1
+    echo "ERROR: Failed to change ownership of aur-repo"
+    exit 1
 fi
 
 echo "Entering aur-repo directory..."
@@ -292,19 +292,19 @@ echo ""
 # Copy our updated PKGBUILD to the AUR repo
 echo "Copying updated PKGBUILD to AUR repo..."
 if cp ../aur/ampcode/PKGBUILD ./PKGBUILD; then
-  echo "PKGBUILD copied successfully"
+    echo "PKGBUILD copied successfully"
 else
-  echo "ERROR: Failed to copy PKGBUILD"
-  exit 1
+    echo "ERROR: Failed to copy PKGBUILD"
+    exit 1
 fi
 
 # Generate new .SRCINFO as non-root user
 echo "Generating .SRCINFO as builder user..."
-if sudo -u builder makepkg --printsrcinfo > .SRCINFO; then
-  echo ".SRCINFO generated successfully"
+if sudo -u builder makepkg --printsrcinfo >.SRCINFO; then
+    echo ".SRCINFO generated successfully"
 else
-  echo "ERROR: Failed to generate .SRCINFO"
-  exit 1
+    echo "ERROR: Failed to generate .SRCINFO"
+    exit 1
 fi
 
 echo "Generated .SRCINFO contents:"
@@ -323,12 +323,12 @@ git add PKGBUILD .SRCINFO
 
 # Check if there are any changes to commit
 if git diff --cached --quiet; then
-  echo "No changes detected – AUR package already at version $VERSION"
-  echo ""
-  echo "==============================================="
-  echo "AUR BUILD COMPLETED (NO CHANGES NEEDED)"
-  echo "==============================================="
-  exit 0
+    echo "No changes detected – AUR package already at version $VERSION"
+    echo ""
+    echo "==============================================="
+    echo "AUR BUILD COMPLETED (NO CHANGES NEEDED)"
+    echo "==============================================="
+    exit 0
 fi
 
 echo "Git status:"
@@ -343,10 +343,10 @@ if git commit -m "Update to version $VERSION
 - Update SHA256 checksums for x86_64 and aarch64
 
 Automated update from GitHub Actions"; then
-  echo "Changes committed successfully"
+    echo "Changes committed successfully"
 else
-  echo "ERROR: Failed to commit changes"
-  exit 1
+    echo "ERROR: Failed to commit changes"
+    exit 1
 fi
 echo ""
 
@@ -355,38 +355,38 @@ echo "==============================================="
 echo "PUSHING TO AUR REPOSITORY"
 echo "==============================================="
 for i in {1..3}; do
-  echo "Attempt $i/3 to push to AUR"
-  echo "Running: git push origin master (trying master first, then main as fallback)"
-  
-  # Try master first, then main as fallback
-  if git push origin master 2>&1; then
-    echo "Successfully pushed to AUR (master branch) on attempt $i"
-    break
-  else
-    MASTER_PUSH_EXIT_CODE=$?
-    echo "Master branch push failed (exit code: $MASTER_PUSH_EXIT_CODE), trying main branch..."
-    
-    if git push origin main 2>&1; then
-      echo "Successfully pushed to AUR (main branch) on attempt $i"
-      break
+    echo "Attempt $i/3 to push to AUR"
+    echo "Running: git push origin master (trying master first, then main as fallback)"
+
+    # Try master first, then main as fallback
+    if git push origin master 2>&1; then
+        echo "Successfully pushed to AUR (master branch) on attempt $i"
+        break
     else
-      MAIN_PUSH_EXIT_CODE=$?
-      echo "Main branch push also failed (exit code: $MAIN_PUSH_EXIT_CODE)"
-      echo "AUR push failed on attempt $i, retrying..."
-      sleep $((i * 2))
-      if [ $i -eq 3 ]; then
-        echo "ERROR: Failed to push to AUR after 3 attempts"
-        echo "Final debugging attempt:"
-        echo "Git remote -v:"
-        git remote -v
-        echo "Git branch -a:"
-        git branch -a
-        echo "Git log --oneline -5:"
-        git log --oneline -5
-        exit 1
-      fi
+        MASTER_PUSH_EXIT_CODE=$?
+        echo "Master branch push failed (exit code: $MASTER_PUSH_EXIT_CODE), trying main branch..."
+
+        if git push origin main 2>&1; then
+            echo "Successfully pushed to AUR (main branch) on attempt $i"
+            break
+        else
+            MAIN_PUSH_EXIT_CODE=$?
+            echo "Main branch push also failed (exit code: $MAIN_PUSH_EXIT_CODE)"
+            echo "AUR push failed on attempt $i, retrying..."
+            sleep $((i * 2))
+            if [ $i -eq 3 ]; then
+                echo "ERROR: Failed to push to AUR after 3 attempts"
+                echo "Final debugging attempt:"
+                echo "Git remote -v:"
+                git remote -v
+                echo "Git branch -a:"
+                git branch -a
+                echo "Git log --oneline -5:"
+                git log --oneline -5
+                exit 1
+            fi
+        fi
     fi
-  fi
 done
 echo ""
 
@@ -401,77 +401,77 @@ echo "UPDATING LOCAL REPOSITORY"
 echo "==============================================="
 echo "Copying updated files back to our repository..."
 if cp aur-repo/PKGBUILD aur/ampcode/PKGBUILD && cp aur-repo/.SRCINFO aur/ampcode/.SRCINFO; then
-  echo "Files copied back successfully"
+    echo "Files copied back successfully"
 else
-  echo "ERROR: Failed to copy files back"
-  exit 1
+    echo "ERROR: Failed to copy files back"
+    exit 1
 fi
 
 # Update local repository with retry logic
 echo "Checking if we're inside a git repository..."
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Configuring local git..."
-  git config --local user.email "amp@ampcode.com"
-  git config --local user.name "Amp"
-  echo "Local git configured"
+    echo "Configuring local git..."
+    git config --local user.email "amp@ampcode.com"
+    git config --local user.name "Amp"
+    echo "Local git configured"
 else
-  echo "Not inside a git repository – skipping local git configuration"
+    echo "Not inside a git repository – skipping local git configuration"
 fi
 echo ""
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  for i in {1..5}; do
-    echo "Attempt $i/5 to commit and push local AUR changes"
+    for i in {1..5}; do
+        echo "Attempt $i/5 to commit and push local AUR changes"
 
-    # Pull latest changes
-    echo "Pulling latest changes..."
-    if git pull origin main; then
-      echo "Successfully pulled latest changes"
-    else
-      echo "Pull failed, continuing anyway..."
-    fi
+        # Pull latest changes
+        echo "Pulling latest changes..."
+        if git pull origin main; then
+            echo "Successfully pulled latest changes"
+        else
+            echo "Pull failed, continuing anyway..."
+        fi
 
-    # Add and commit changes
-    echo "Adding changes to git..."
-    echo "Files in aur/ampcode/:"
-    ls -la aur/ampcode/
-    git add aur/ampcode/
-    echo "Git status after add:"
-    git status
-    
-    if git commit -m "Update AUR package to $VERSION with checksums"; then
-      echo "Changes committed successfully"
-      # Try to push
-      echo "Pushing changes..."
-      if git push; then
-        echo "Successfully pushed local changes on attempt $i"
-        echo ""
-        echo "==============================================="
-        echo "AUR BUILD COMPLETED SUCCESSFULLY"
-        echo "==============================================="
-        exit 0
-      else
-        PUSH_EXIT_CODE=$?
-        echo "Push failed on attempt $i (exit code: $PUSH_EXIT_CODE), retrying..."
-        sleep $((i * 2))
-      fi
-    else
-      echo "No changes to commit on attempt $i"
-      echo ""
-      echo "==============================================="
-      echo "AUR BUILD COMPLETED (NO CHANGES)"
-      echo "==============================================="
-      exit 0
-    fi
-  done
+        # Add and commit changes
+        echo "Adding changes to git..."
+        echo "Files in aur/ampcode/:"
+        ls -la aur/ampcode/
+        git add aur/ampcode/
+        echo "Git status after add:"
+        git status
 
-  echo "ERROR: Failed to push local changes after 5 attempts"
-  exit 1
+        if git commit -m "Update AUR package to $VERSION with checksums"; then
+            echo "Changes committed successfully"
+            # Try to push
+            echo "Pushing changes..."
+            if git push; then
+                echo "Successfully pushed local changes on attempt $i"
+                echo ""
+                echo "==============================================="
+                echo "AUR BUILD COMPLETED SUCCESSFULLY"
+                echo "==============================================="
+                exit 0
+            else
+                PUSH_EXIT_CODE=$?
+                echo "Push failed on attempt $i (exit code: $PUSH_EXIT_CODE), retrying..."
+                sleep $((i * 2))
+            fi
+        else
+            echo "No changes to commit on attempt $i"
+            echo ""
+            echo "==============================================="
+            echo "AUR BUILD COMPLETED (NO CHANGES)"
+            echo "==============================================="
+            exit 0
+        fi
+    done
+
+    echo "ERROR: Failed to push local changes after 5 attempts"
+    exit 1
 else
-  echo "Not inside a git repository – skipping local workspace update"
-  echo ""
-  echo "==============================================="
-  echo "AUR BUILD COMPLETED SUCCESSFULLY"
-  echo "==============================================="
-  exit 0
+    echo "Not inside a git repository – skipping local workspace update"
+    echo ""
+    echo "==============================================="
+    echo "AUR BUILD COMPLETED SUCCESSFULLY"
+    echo "==============================================="
+    exit 0
 fi

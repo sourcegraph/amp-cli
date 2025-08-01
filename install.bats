@@ -5,7 +5,7 @@
 setup() {
     # Extract functions from install.sh without running main
     export TEST_INSTALL_SCRIPT="${PWD}/install.sh"
-    
+
     # Source the functions we need by creating a temporary script
     cat > "${BATS_TMPDIR}/functions.sh" << 'EOF'
 #!/bin/sh
@@ -124,7 +124,7 @@ get_architecture() {
     RETVAL="$_arch"
 }
 EOF
-    
+
     # Source the functions
     source "${BATS_TMPDIR}/functions.sh"
 }
@@ -273,7 +273,7 @@ teardown() {
 # Test architecture detection
 @test "get_architecture returns valid architecture" {
     get_architecture
-    
+
     # Check that RETVAL is set and contains expected patterns
     case "$RETVAL" in
         *-darwin|*-linux|*-windows)

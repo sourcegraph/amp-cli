@@ -206,8 +206,8 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" 
-            integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+            integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ=="
             crossorigin="anonymous"></script>
     <script>
         class C64Terminal {
@@ -409,7 +409,7 @@ HELP          - SHOW THIS HELP`;
                     this.addToTerminalHTML('<span class="error">?MISSING PROGRAM NAME</span>');
                     return;
                 }
-                
+
                 const safeName = this.sanitizeInput(name);
                 this.currentProgram = safeName;
                 this.programs.set(safeName, []);
@@ -424,13 +424,13 @@ HELP          - SHOW THIS HELP`;
                     this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-                
+
                 const safeName = this.sanitizeInput(name);
                 this.currentProgram = safeName;
                 this.programMode = true;
                 this.prompt.textContent = `${this.escapeHTML(safeName)}:`;
                 this.addToTerminalHTML(`<span class="success">EDITING PROGRAM: ${this.escapeHTML(safeName)}</span>`);
-                
+
                 const program = this.programs.get(safeName);
                 program.forEach(line => this.addToTerminal(line));
             }
@@ -440,11 +440,11 @@ HELP          - SHOW THIS HELP`;
                     this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-                
+
                 const safeName = this.sanitizeInput(name);
                 this.addToTerminalHTML(`<span class="success">RUNNING PROGRAM: ${this.escapeHTML(safeName)}</span>`);
                 const program = this.programs.get(safeName);
-                
+
                 setTimeout(() => {
                     program.forEach((line, index) => {
                         setTimeout(() => {
@@ -463,7 +463,7 @@ HELP          - SHOW THIS HELP`;
                     this.addToTerminal('NO PROGRAMS FOUND');
                     return;
                 }
-                
+
                 for (const [name, program] of this.programs) {
                     this.addToTerminal(`${this.escapeHTML(name).padEnd(15)} ${program.length} LINES`);
                 }
@@ -482,7 +482,7 @@ HELP          - SHOW THIS HELP`;
                     this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-                
+
                 const safeName = this.sanitizeInput(name);
                 this.programs.delete(safeName);
                 this.addToTerminalHTML(`<span class="success">PROGRAM ${this.escapeHTML(safeName)} DELETED</span>`);

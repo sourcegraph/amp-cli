@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="no-referrer">
     <title>C64 Terminal - Amp</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323:wght@400&display=swap');
@@ -201,7 +206,9 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" 
+            integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" 
+            crossorigin="anonymous"></script>
     <script>
         class C64Terminal {
             constructor() {
@@ -305,10 +312,12 @@ TYPE 'HELP' FOR COMMANDS
             }
 
             processCommand() {
-                const input = this.userInput.value.trim().toUpperCase();
+                const rawInput = this.userInput.value.trim();
+                const input = this.sanitizeInput(rawInput).toUpperCase();
                 if (!input) return;
 
-                this.addToTerminal(`<span class="highlight">${input}</span>`);
+                // Use safe HTML method for command echo
+                this.addToTerminalHTML(`<span class="highlight">${this.escapeHTML(input)}</span>`);
                 this.commandHistory.push(input);
                 this.historyIndex = this.commandHistory.length;
 
@@ -334,7 +343,7 @@ TYPE 'HELP' FOR COMMANDS
                 if (this.commands[command]) {
                     this.commands[command](...args);
                 } else {
-                    this.addToTerminal(`<span class="error">?SYNTAX ERROR</span>`);
+                    this.addToTerminalHTML(`<span class="error">?SYNTAX ERROR</span>`);
                 }
             }
 
@@ -344,14 +353,39 @@ TYPE 'HELP' FOR COMMANDS
                     return;
                 }
 
+                const safeInput = this.sanitizeInput(input);
                 const lineNumber = this.programs.get(this.currentProgram).length + 10;
-                this.programs.get(this.currentProgram).push(`${lineNumber} ${input}`);
-                this.addToTerminal(`${lineNumber} ${input}`);
+                this.programs.get(this.currentProgram).push(`${lineNumber} ${safeInput}`);
+                this.addToTerminal(`${lineNumber} ${safeInput}`);
             }
 
-            addToTerminal(text) {
-                this.terminalContent.innerHTML += text + '\n';
+            addToTerminal(text, allowHTML = false) {
+                if (allowHTML) {
+                    this.terminalContent.innerHTML += text + '\n';
+                } else {
+                    // Create text node to prevent XSS
+                    const line = document.createElement('div');
+                    line.textContent = text;
+                    this.terminalContent.appendChild(line);
+                }
                 this.terminalContent.scrollTop = this.terminalContent.scrollHeight;
+            }
+
+            addToTerminalHTML(htmlText) {
+                // Only for trusted HTML content
+                this.terminalContent.innerHTML += htmlText + '\n';
+                this.terminalContent.scrollTop = this.terminalContent.scrollHeight;
+            }
+
+            sanitizeInput(input) {
+                // Remove potentially dangerous characters and limit length
+                return input.replace(/[<>'"&]/g, '').slice(0, 100);
+            }
+
+            escapeHTML(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
 
             showHelp() {
@@ -367,53 +401,56 @@ CLEAR         - CLEAR SCREEN
 SYS           - SYSTEM INFORMATION
 AMP           - AMP INFORMATION
 HELP          - SHOW THIS HELP`;
-                this.addToTerminal(helpText);
+                this.addToTerminalHTML(helpText);
             }
 
             newProgram(name) {
                 if (!name) {
-                    this.addToTerminal('<span class="error">?MISSING PROGRAM NAME</span>');
+                    this.addToTerminalHTML('<span class="error">?MISSING PROGRAM NAME</span>');
                     return;
                 }
-
-                this.currentProgram = name;
-                this.programs.set(name, []);
+                
+                const safeName = this.sanitizeInput(name);
+                this.currentProgram = safeName;
+                this.programs.set(safeName, []);
                 this.programMode = true;
-                this.prompt.textContent = `${name}:`;
-                this.addToTerminal(`<span class="success">CREATING PROGRAM: ${name}</span>`);
+                this.prompt.textContent = `${this.escapeHTML(safeName)}:`;
+                this.addToTerminalHTML(`<span class="success">CREATING PROGRAM: ${this.escapeHTML(safeName)}</span>`);
                 this.addToTerminal('ENTER PROGRAM LINES (TYPE EXIT TO FINISH)');
             }
 
             editProgram(name) {
                 if (!name || !this.programs.has(name)) {
-                    this.addToTerminal('<span class="error">?PROGRAM NOT FOUND</span>');
+                    this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-
-                this.currentProgram = name;
+                
+                const safeName = this.sanitizeInput(name);
+                this.currentProgram = safeName;
                 this.programMode = true;
-                this.prompt.textContent = `${name}:`;
-                this.addToTerminal(`<span class="success">EDITING PROGRAM: ${name}</span>`);
-
-                const program = this.programs.get(name);
+                this.prompt.textContent = `${this.escapeHTML(safeName)}:`;
+                this.addToTerminalHTML(`<span class="success">EDITING PROGRAM: ${this.escapeHTML(safeName)}</span>`);
+                
+                const program = this.programs.get(safeName);
                 program.forEach(line => this.addToTerminal(line));
             }
 
             runProgram(name) {
                 if (!name || !this.programs.has(name)) {
-                    this.addToTerminal('<span class="error">?PROGRAM NOT FOUND</span>');
+                    this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-
-                this.addToTerminal(`<span class="success">RUNNING PROGRAM: ${name}</span>`);
-                const program = this.programs.get(name);
-
+                
+                const safeName = this.sanitizeInput(name);
+                this.addToTerminalHTML(`<span class="success">RUNNING PROGRAM: ${this.escapeHTML(safeName)}</span>`);
+                const program = this.programs.get(safeName);
+                
                 setTimeout(() => {
                     program.forEach((line, index) => {
                         setTimeout(() => {
-                            this.addToTerminal(`<span class="highlight">${line}</span>`);
+                            this.addToTerminalHTML(`<span class="highlight">${this.escapeHTML(line)}</span>`);
                             if (index === program.length - 1) {
-                                this.addToTerminal('<span class="success">PROGRAM COMPLETED</span>');
+                                this.addToTerminalHTML('<span class="success">PROGRAM COMPLETED</span>');
                             }
                         }, index * 100);
                     });
@@ -421,40 +458,41 @@ HELP          - SHOW THIS HELP`;
             }
 
             listPrograms() {
-                this.addToTerminal('<span class="success">SAVED PROGRAMS:</span>');
+                this.addToTerminalHTML('<span class="success">SAVED PROGRAMS:</span>');
                 if (this.programs.size === 0) {
                     this.addToTerminal('NO PROGRAMS FOUND');
                     return;
                 }
-
+                
                 for (const [name, program] of this.programs) {
-                    this.addToTerminal(`${name.padEnd(15)} ${program.length} LINES`);
+                    this.addToTerminal(`${this.escapeHTML(name).padEnd(15)} ${program.length} LINES`);
                 }
             }
 
             saveProgram() {
                 if (!this.programMode) {
-                    this.addToTerminal('<span class="error">?NO PROGRAM TO SAVE</span>');
+                    this.addToTerminalHTML('<span class="error">?NO PROGRAM TO SAVE</span>');
                     return;
                 }
-                this.addToTerminal(`<span class="success">PROGRAM ${this.currentProgram} SAVED</span>`);
+                this.addToTerminalHTML(`<span class="success">PROGRAM ${this.escapeHTML(this.currentProgram)} SAVED</span>`);
             }
 
             deleteProgram(name) {
                 if (!name || !this.programs.has(name)) {
-                    this.addToTerminal('<span class="error">?PROGRAM NOT FOUND</span>');
+                    this.addToTerminalHTML('<span class="error">?PROGRAM NOT FOUND</span>');
                     return;
                 }
-
-                this.programs.delete(name);
-                this.addToTerminal(`<span class="success">PROGRAM ${name} DELETED</span>`);
+                
+                const safeName = this.sanitizeInput(name);
+                this.programs.delete(safeName);
+                this.addToTerminalHTML(`<span class="success">PROGRAM ${this.escapeHTML(safeName)} DELETED</span>`);
             }
 
             exitProgram() {
                 this.programMode = false;
                 this.currentProgram = '';
                 this.prompt.textContent = 'READY.';
-                this.addToTerminal('<span class="success">EXITED PROGRAM MODE</span>');
+                this.addToTerminalHTML('<span class="success">EXITED PROGRAM MODE</span>');
             }
 
             clearScreen() {
@@ -462,7 +500,7 @@ HELP          - SHOW THIS HELP`;
             }
 
             systemInfo() {
-                this.addToTerminal(`<span class="success">SYSTEM INFORMATION:</span>
+                this.addToTerminalHTML(`<span class="success">SYSTEM INFORMATION:</span>
 COMPUTER: AMP 64
 MEMORY: 64K RAM
 BASIC: V2.0
@@ -471,7 +509,7 @@ PROGRAMS: ${this.programs.size}`);
             }
 
             ampInfo() {
-                this.addToTerminal(`<span class="success">AMP - AN AGENTIC CODING TOOL, IN RESEARCH PREVIEW FROM SOURCEGRAPH</span>
+                this.addToTerminalHTML(`<span class="success">AMP - AN AGENTIC CODING TOOL, IN RESEARCH PREVIEW FROM SOURCEGRAPH</span>
 VERSION: 1.0
 WEBSITE: AMPCODE.COM
 REPOSITORY: PACKAGES.AMPCODE.COM

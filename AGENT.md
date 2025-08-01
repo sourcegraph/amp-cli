@@ -117,6 +117,11 @@ test-install-script
 - Local variables: Use `local` keyword, prefix with `_` (e.g., `_arch`)
 - Environment variables: `AMP_*` prefix
 
+### Output Conventions
+- Always capitalize "Amp" in user-facing messages (say() function)
+- Use "Amp" not "amp" in shell comments when referring to the tool
+- Examples: "Installing Amp via Nix flake...", "Found existing Amp installation"
+
 ## Pre-commit Hooks
 
 The repository includes comprehensive validation:

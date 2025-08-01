@@ -17,7 +17,7 @@ set -u
 SCRIPT_VERSION="1.0.0"
 
 # If AMP_BINARY_ROOT is unset or empty, default it.
-AMP_BINARY_ROOT="${AMP_BINARY_ROOT:-https://packages.ampcode.com/binaries}"
+AMP_BINARY_ROOT="${AMP_BINARY_ROOT:-https://packages.ampcode.com/}"
 
 # Store script arguments for dry-run detection
 SCRIPT_ARGS="$*"
@@ -58,16 +58,15 @@ DESCRIPTION:
 OPTIONS:
     -h, --help          Show this help message and exit
     -V, --version       Show version information and exit
-    --doctor            Show system diagnostics for troubleshooting
     -v, --verbose       Enable verbose output
     -q, --quiet         Disable progress output (quiet mode)
     --dry-run           Show what would be done without executing
     --no-confirm        Skip interactive prompts and use defaults
+    --doctor            Show system diagnostics for troubleshooting
 
 ENVIRONMENT VARIABLES:
     AMP_BINARY_ROOT     Override the binary download URL root
-                        (default: https://packages.ampcode.com/binaries)
-    AMP_OVERRIDE_URL    Override the complete binary download URL
+                        (default: https://packages.ampcode.com/)
     AMP_DRY_RUN         Enable dry-run mode (same as --dry-run)
     AMP_NO_CONFIRM      Skip confirmation prompts (same as --no-confirm)
     HTTP_PROXY          HTTP proxy server URL
@@ -173,6 +172,13 @@ doctor() {
     echo "Package Managers:"
     if has_homebrew; then
         echo "  Homebrew: ✓ ($(brew --version 2>/dev/null | head -1))"
+        if is_homebrew_tapped; then
+            echo "    sourcegraph/amp-cli tap: ✓"
+        else
+            echo "    sourcegraph/amp-cli tap: ✗"
+        fi
+        echo "    All taps:"
+        brew tap 2>/dev/null | sed 's/^/      /' || echo "      (unable to list taps)"
     else
         echo "  Homebrew: ✗"
     fi
@@ -223,9 +229,9 @@ doctor() {
     # Environment Variables
     echo "Environment Variables:"
     echo "  AMP_BINARY_ROOT: ${AMP_BINARY_ROOT:-<default>}"
-    echo "  AMP_OVERRIDE_URL: ${AMP_OVERRIDE_URL:-<not set>}"
     echo "  AMP_DRY_RUN: ${AMP_DRY_RUN:-<not set>}"
     echo "  AMP_NO_CONFIRM: ${AMP_NO_CONFIRM:-<not set>}"
+    echo "  NIXPKGS_ALLOW_UNFREE: ${NIXPKGS_ALLOW_UNFREE:-<not set>}"
     echo "  HTTP_PROXY: ${HTTP_PROXY:-<not set>}"
     echo "  HTTPS_PROXY: ${HTTPS_PROXY:-<not set>}"
     echo "  NO_PROXY: ${NO_PROXY:-<not set>}"
@@ -246,19 +252,16 @@ doctor() {
     fi
     echo ""
 
-    # Download URL that would be used
-    local _arch="$RETVAL"
-    local _ext=""
-    case "$_arch" in
-    *windows*)
-        _ext=".exe"
-        ;;
-    esac
-    local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
-    echo "Download Information:"
-    echo "  Target URL: $_url"
-    echo "  Binary name: amp${_ext}"
-    echo ""
+    # Nix profile status
+    if has_nix && check_cmd nix; then
+        echo "Nix Profile Status:"
+        if nix --extra-experimental-features nix-command --extra-experimental-features flakes profile list 2>/dev/null; then
+            echo "  Profile list: ✓"
+        else
+            echo "  Profile list: ✗ (experimental features may be disabled)"
+        fi
+        echo ""
+    fi
 
     # Temporary directory test
     echo "System Tests:"
@@ -344,22 +347,13 @@ main() {
     local _arch="$RETVAL"
     assert_nz "$_arch" "arch"
 
-    local _ext=""
-    case "$_arch" in
-    *windows*)
-        _ext=".exe"
-        ;;
-    esac
-
-    local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
-
     local _dir
     if ! _dir="$(run_cmd mktemp -d)"; then
         # Because the previous command ran in a subshell, we must manually
         # propagate exit status.
         exit 1
     fi
-    local _file="${_dir}/amp${_ext}"
+    local _file="TODO"
 
     local _ansi_escapes_are_valid=false
     if [ -t 2 ]; then
@@ -568,6 +562,7 @@ print_logo() {
     else
         printf "${LOGO}\n"
     fi
+
     printf "Amp - An agentic coding tool, in research preview from Sourcegraph\n\n"
 }
 
@@ -576,8 +571,68 @@ has_homebrew() {
     check_cmd brew
 }
 
+is_homebrew_tapped() {
+    if ! has_homebrew; then
+        return 1
+    fi
+    brew tap | grep -q "^sourcegraph/amp-cli$" 2>/dev/null
+}
+
+install_homebrew_tap() {
+    if ! has_homebrew; then
+        err "Homebrew is not available"
+    fi
+
+    if is_homebrew_tapped; then
+        verbose "sourcegraph/amp-cli tap is already installed"
+        return 0
+    fi
+
+    say "Installing sourcegraph/amp-cli tap..."
+    run_cmd brew tap sourcegraph/amp-cli
+}
+
+update_homebrew_tap() {
+    if ! has_homebrew; then
+        err "Homebrew is not available"
+    fi
+
+    if ! is_homebrew_tapped; then
+        verbose "sourcegraph/amp-cli tap is not installed, installing first..."
+        install_homebrew_tap
+        return 0
+    fi
+
+    say "Updating sourcegraph/amp-cli tap..."
+    run_cmd brew tap --force-auto-update sourcegraph/amp-cli
+}
+
 has_nix() {
     check_cmd nix-env || check_cmd nix
+}
+
+install_nix_flake() {
+    if ! check_cmd nix; then
+        err "Nix is not available"
+    fi
+
+    say "Installing Amp via Nix flake..."
+    verbose "Using nix profile install with experimental features and allowing unfree packages..."
+
+    # Set environment variable to allow unfree packages
+    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli --no-write-lock-file
+}
+
+update_nix_flake() {
+    if ! check_cmd nix; then
+        err "Nix is not available"
+    fi
+
+    say "Updating Amp via Nix flake..."
+    verbose "Using nix profile upgrade with experimental features and allowing unfree packages..."
+
+    # Set environment variable to allow unfree packages
+    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile upgrade github:sourcegraph/amp-cli --no-write-lock-file
 }
 
 has_pnpm() {

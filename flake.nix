@@ -42,8 +42,6 @@
             sha256 = shaMap.${arch};
           };
 
-          buildInputs = [ pkgs.ripgrep ];
-
           dontBuild = true;
           dontConfigure = true;
           dontUnpack = true;
@@ -55,7 +53,7 @@
             cp $src $out/bin/amp
             chmod +x $out/bin/amp
 
-            # Create wrapper to ensure ripgrep is in PATH
+            # Create wrapper to ensure ripgrep is in PATH at runtime
             wrapProgram $out/bin/amp \
               --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ripgrep ]}
 
@@ -65,9 +63,9 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
 
           meta = with pkgs.lib; {
-            description = "AI-powered coding assistant CLI tool";
-            homepage = "https://github.com/sourcegraph/amp-cli";
-            license = licenses.mit; # Update with actual license
+            description = "An agentic coding tool, in research preview from Sourcegraph";
+            homepage = "https://ampcode.com";
+            license = licenses.unfree;
             maintainers = [ ];
             platforms = platforms.unix;
           };

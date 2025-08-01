@@ -38,6 +38,66 @@ has_choco() {
     check_cmd choco
 }
 
+is_homebrew_tapped() {
+    if ! has_homebrew; then
+        return 1
+    fi
+    brew tap | grep -q "^sourcegraph/amp-cli$" 2>/dev/null
+}
+
+install_homebrew_tap() {
+    if ! has_homebrew; then
+        err "Homebrew is not available"
+    fi
+
+    if is_homebrew_tapped; then
+        verbose "sourcegraph/amp-cli tap is already installed"
+        return 0
+    fi
+
+    say "Installing sourcegraph/amp-cli tap..."
+    run_cmd brew tap sourcegraph/amp-cli
+}
+
+update_homebrew_tap() {
+    if ! has_homebrew; then
+        err "Homebrew is not available"
+    fi
+
+    if ! is_homebrew_tapped; then
+        verbose "sourcegraph/amp-cli tap is not installed, installing first..."
+        install_homebrew_tap
+        return 0
+    fi
+
+    say "Updating sourcegraph/amp-cli tap..."
+    run_cmd brew tap --force-auto-update sourcegraph/amp-cli
+}
+
+install_nix_flake() {
+    if ! check_cmd nix; then
+        err "Modern nix command is not available. Please install Nix with flake support."
+    fi
+    
+    say "Installing Amp via Nix flake..."
+    verbose "Using nix profile install with experimental features and allowing unfree packages..."
+    
+    # Set environment variable to allow unfree packages
+    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile install github:sourcegraph/amp-cli
+}
+
+update_nix_flake() {
+    if ! check_cmd nix; then
+        err "Modern nix command is not available. Please install Nix with flake support."
+    fi
+    
+    say "Updating Amp via Nix flake..."
+    verbose "Using nix profile upgrade with experimental features and allowing unfree packages..."
+    
+    # Set environment variable to allow unfree packages
+    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile upgrade github:sourcegraph/amp-cli
+}
+
 is_archlinux() {
     [ -f /etc/arch-release ] || [ -f /etc/archlinux-release ]
 }
@@ -108,25 +168,25 @@ run_cmd() {
 # Migration function to handle existing Node.js-based amp installations
 migrate() {
     verbose "Checking for existing amp installation..."
-    
+
     if ! check_cmd amp; then
         verbose "No existing amp found on PATH"
         return 0
     fi
-    
+
     say "Found existing amp installation"
-    
+
     # Check which package manager installed amp
     local _package_manager=""
     local _confirm_msg=""
     local _uninstall_cmd=""
-    
+
     # Check npm global packages
     if has_npm && npm list -g amp 2>/dev/null | grep -q "amp@"; then
         _package_manager="npm"
         _confirm_msg="Found amp installed via npm. Remove it?"
         _uninstall_cmd="npm uninstall -g amp"
-    # Check pnpm global packages  
+    # Check pnpm global packages
     elif has_pnpm && pnpm list -g amp 2>/dev/null | grep -q "amp"; then
         _package_manager="pnpm"
         _confirm_msg="Found amp installed via pnpm. Remove it?"
@@ -140,15 +200,15 @@ migrate() {
         verbose "amp found but not installed via npm/pnpm/yarn, skipping migration"
         return 0
     fi
-    
+
     verbose "Detected amp installed via $_package_manager"
-    
+
     # Check for --no-confirm flag or environment variable
     local _no_confirm=""
     if [ "${AMP_NO_CONFIRM-}" ]; then
         _no_confirm="yes"
     fi
-    
+
     # Ask for confirmation unless --no-confirm is set
     if [ "$_no_confirm" != "yes" ]; then
         printf "%s [y/N]: " "$_confirm_msg"
@@ -162,10 +222,10 @@ migrate() {
             ;;
         esac
     fi
-    
+
     say "Removing existing amp installation via $_package_manager..."
     run_cmd $_uninstall_cmd
-    
+
     # Verify removal (skip verification in dry-run mode)
     if [ "${AMP_DRY_RUN-}" ]; then
         say "Would remove existing amp installation"
@@ -500,7 +560,7 @@ teardown() {
     check_cmd() {
         [ "$1" != "amp" ]
     }
-    
+
     run migrate
     [ "$status" -eq 0 ]
 }
@@ -510,7 +570,7 @@ teardown() {
     if ! has_npm; then
         skip "npm not available"
     fi
-    
+
     # Mock functions to simulate npm-installed amp
     check_cmd() {
         case "$1" in
@@ -518,16 +578,16 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     npm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             echo "amp@1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
     export AMP_NO_CONFIRM=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     [[ "$output" == *"Found existing amp installation"* ]]
@@ -539,7 +599,7 @@ teardown() {
     if ! has_pnpm; then
         skip "pnpm not available"
     fi
-    
+
     # Mock functions to simulate pnpm-installed amp
     check_cmd() {
         case "$1" in
@@ -547,16 +607,16 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     pnpm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             echo "amp 1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
     export AMP_NO_CONFIRM=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     [[ "$output" == *"Found existing amp installation"* ]]
@@ -568,7 +628,7 @@ teardown() {
     if ! has_yarn; then
         skip "yarn not available"
     fi
-    
+
     # Mock functions to simulate yarn-installed amp
     check_cmd() {
         case "$1" in
@@ -576,16 +636,16 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     yarn() {
         if [ "$1" = "global" ] && [ "$2" = "list" ]; then
             echo "amp@1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
     export AMP_NO_CONFIRM=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     [[ "$output" == *"Found existing amp installation"* ]]
@@ -600,28 +660,28 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     # Mock package managers to return no amp packages
     npm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             return 1
         fi
     }
-    
+
     pnpm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             return 1
         fi
     }
-    
+
     yarn() {
         if [ "$1" = "global" ] && [ "$2" = "list" ]; then
             echo "other-package@1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     [[ "$output" == *"Found existing amp installation"* ]]
@@ -632,7 +692,7 @@ teardown() {
     if ! has_npm; then
         skip "npm not available"
     fi
-    
+
     # Mock functions
     check_cmd() {
         case "$1" in
@@ -640,16 +700,16 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     npm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             echo "amp@1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
     export AMP_NO_CONFIRM=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     # Should not prompt for confirmation
@@ -661,7 +721,7 @@ teardown() {
     if ! has_npm; then
         skip "npm not available"
     fi
-    
+
     # Mock functions
     check_cmd() {
         case "$1" in
@@ -669,17 +729,205 @@ teardown() {
             *) command -v "$1" >/dev/null 2>&1 ;;
         esac
     }
-    
+
     npm() {
         if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
             echo "amp@1.0.0"
         fi
     }
-    
+
     export AMP_DRY_RUN=1
     export AMP_NO_CONFIRM=1
-    
+
     run migrate
     [ "$status" -eq 0 ]
     [[ "$output" == *"would run: npm uninstall -g amp"* ]]
+}
+
+# Test homebrew tap functions
+@test "is_homebrew_tapped fails when homebrew not present" {
+    # Mock homebrew to be unavailable
+    check_cmd() {
+        [ "$1" != "brew" ]
+    }
+
+    run is_homebrew_tapped
+    [ "$status" -eq 1 ]
+}
+
+@test "is_homebrew_tapped detects sourcegraph/amp-cli tap when present" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock brew tap command to return sourcegraph/amp-cli
+    brew() {
+        if [ "$1" = "tap" ]; then
+            echo "sourcegraph/amp-cli"
+        fi
+    }
+
+    run is_homebrew_tapped
+    [ "$status" -eq 0 ]
+}
+
+@test "is_homebrew_tapped fails when sourcegraph/amp-cli tap not present" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock brew tap command to return different taps
+    brew() {
+        if [ "$1" = "tap" ]; then
+            echo "other/tap"
+        fi
+    }
+
+    run is_homebrew_tapped
+    [ "$status" -eq 1 ]
+}
+
+@test "install_homebrew_tap fails when homebrew not present" {
+    # Mock homebrew to be unavailable
+    check_cmd() {
+        [ "$1" != "brew" ]
+    }
+
+    run install_homebrew_tap
+    [ "$status" -eq 1 ]
+}
+
+@test "install_homebrew_tap skips when tap already installed" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock is_homebrew_tapped to return true
+    is_homebrew_tapped() {
+        return 0
+    }
+
+    export VERBOSE=1
+    run install_homebrew_tap
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"sourcegraph/amp-cli tap is already installed"* ]]
+}
+
+@test "install_homebrew_tap installs tap when not present" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock is_homebrew_tapped to return false
+    is_homebrew_tapped() {
+        return 1
+    }
+
+    export AMP_DRY_RUN=1
+    run install_homebrew_tap
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing sourcegraph/amp-cli tap..."* ]]
+    [[ "$output" == *"would run: brew tap sourcegraph/amp-cli"* ]]
+}
+
+@test "update_homebrew_tap fails when homebrew not present" {
+    # Mock homebrew to be unavailable
+    check_cmd() {
+        [ "$1" != "brew" ]
+    }
+
+    run update_homebrew_tap
+    [ "$status" -eq 1 ]
+}
+
+@test "update_homebrew_tap installs tap when not present" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock is_homebrew_tapped to return false
+    is_homebrew_tapped() {
+        return 1
+    }
+
+    # Mock install_homebrew_tap function
+    install_homebrew_tap() {
+        say "Installing sourcegraph/amp-cli tap..."
+        run_cmd brew tap sourcegraph/amp-cli
+    }
+
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run update_homebrew_tap
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"sourcegraph/amp-cli tap is not installed, installing first..."* ]]
+    [[ "$output" == *"Installing sourcegraph/amp-cli tap..."* ]]
+}
+
+@test "update_homebrew_tap updates tap when already present" {
+    if ! has_homebrew; then
+        skip "homebrew not installed"
+    fi
+
+    # Mock is_homebrew_tapped to return true
+    is_homebrew_tapped() {
+        return 0
+    }
+
+    export AMP_DRY_RUN=1
+    run update_homebrew_tap
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating sourcegraph/amp-cli tap..."* ]]
+    [[ "$output" == *"would run: brew tap --force-auto-update sourcegraph/amp-cli"* ]]
+}
+
+# Test nix flake function
+@test "install_nix_flake fails when nix command not present" {
+    # Mock nix command to be unavailable
+    check_cmd() {
+        [ "$1" != "nix" ]
+    }
+
+    run install_nix_flake
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Modern nix command is not available"* ]]
+}
+
+@test "install_nix_flake installs via nix profile" {
+    if ! check_cmd nix; then
+        skip "nix command not installed"
+    fi
+
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_nix_flake
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp via Nix flake..."* ]]
+    [[ "$output" == *"Using nix profile install with experimental features and allowing unfree packages..."* ]]
+    [[ "$output" == *"would run: nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile install github:sourcegraph/amp-cli"* ]]
+}
+
+@test "update_nix_flake fails when nix command not present" {
+    # Mock nix command to be unavailable
+    check_cmd() {
+        [ "$1" != "nix" ]
+    }
+    
+    run update_nix_flake
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Modern nix command is not available"* ]]
+}
+
+@test "update_nix_flake updates via nix profile upgrade" {
+    if ! check_cmd nix; then
+        skip "nix command not installed"
+    fi
+
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run update_nix_flake
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating Amp via Nix flake..."* ]]
+    [[ "$output" == *"Using nix profile upgrade with experimental features and allowing unfree packages..."* ]]
+    [[ "$output" == *"would run: nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile upgrade github:sourcegraph/amp-cli"* ]]
 }

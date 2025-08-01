@@ -22,13 +22,10 @@ result-*
 *.nupkg
 
 # Build artifacts and temporary files
-artifacts/
-debs/
-rpms/
-repository/
-release-assets/
 *.tar.gz
 *.zip
+*.rpm
+*.deb
 
 # GPG signing artifacts
 *.asc

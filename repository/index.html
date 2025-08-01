@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Amp CLI Package Repositories</title>
+    <meta charset="utf-8">
+    <style>
+      body { font-family: Arial, sans-serif; margin: 40px; }
+      h1 { color: #333; }
+      ul { list-style-type: none; padding: 0; }
+      li { margin: 10px 0; }
+      a { color: #007bff; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+      code { font-family: 'Courier New', monospace; }
+    </style>
+</head>
+<body>
+    <h1>Amp CLI Package Repositories</h1>
+    <p>Official package repositories for the Amp CLI tool.</p>
+    <ul>
+        <li><a href="debian/">📦 Debian/Ubuntu Repository</a></li>
+        <li><a href="rpm/">📦 RHEL/Fedora/CentOS Repository</a></li>
+        <li><a href="gpg/">🔑 GPG Keys</a></li>
+    </ul>
+    <h2>Quick Setup</h2>
+    <h3>Debian/Ubuntu</h3>
+    <pre><code>curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc | \
+  sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] \
+  https://packages.ampcode.com/debian stable main" | \
+  sudo tee /etc/apt/sources.list.d/amp-cli.list
+sudo apt update && sudo apt install amp</code></pre>
+    <h3>RHEL/Fedora/CentOS</h3>
+    <pre><code>sudo curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc \
+  -o /etc/pki/rpm-gpg/RPM-GPG-KEY-amp-cli
+sudo tee /etc/yum.repos.d/amp-cli.repo <<'REPO_EOF'
+[amp-cli]
+name=Amp CLI Repository
+baseurl=https://packages.ampcode.com/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-amp-cli
+REPO_EOF
+sudo yum install amp</code></pre>
+</body>
+</html>

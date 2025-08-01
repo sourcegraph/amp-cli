@@ -114,6 +114,7 @@ jobs:
             gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0
           else
             echo "index.html not found at expected path"
+            exit 1
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

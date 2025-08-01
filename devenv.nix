@@ -10,6 +10,8 @@
     # Package manager tools
     createrepo_c # For RPM repositories
     dpkg # For Debian packages
+    # Testing tools
+    bats # Bash testing framework
     # Linting and validation tools
     shellcheck # Shell script linting
     shfmt # Shell script formatting
@@ -338,6 +340,15 @@
 
       echo "Test build complete!"
     '';
+
+    test-install-script.exec = ''
+      echo "Running install script tests..."
+      if [ -f "install.bats" ]; then
+        bats install.bats
+      else
+        echo "No install script tests found (install.bats)"
+      fi
+    '';
   };
 
   enterShell = ''
@@ -346,6 +357,7 @@
     echo "Available scripts:"
     echo "  - validate-all-packages: Validate all package configurations (including Docker)"
     echo "  - build-test-packages: Test package building"
+    echo "  - test-install-script: Run BATS tests for install script"
     echo ""
     echo "Pre-commit hooks configured for:"
     echo "  - Shell scripts (shellcheck, shfmt)"

@@ -1,472 +1,637 @@
-#!/bin/bash
+#!/bin/sh
+# shellcheck shell=dash
 
-# Amp CLI Universal Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/sourcegraph/amp-cli/main/install.sh | bash
+# If you need an offline install, or you'd prefer to run the binary directly, head to
+# https://github.com/sourcegraph/amp-cli/releases then pick the version and platform
+# most appropriate for your deployment target.
+#
+# This is just a little script that selects and downloads the right `amp`. It does
+# platform detection, downloads the installer, and runs it; that's it.
+#
 
-set -e
+# This script is based off https://github.com/rust-lang/rustup/blob/f8d7b3baba7a63237cb2b82ef49a68a37dd0633c/rustup-init.sh
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
 
-# Version to install (can be overridden with AMP_VERSION env var)
-VERSION=${AMP_VERSION:-"0.0.1753935578-gd618e6"}
+set -u
 
-# Print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+# Script version
+SCRIPT_VERSION="1.0.0"
+
+# If AMP_BINARY_ROOT is unset or empty, default it.
+AMP_BINARY_ROOT="${AMP_BINARY_ROOT:-https://packages.ampcode.com/binaries}"
+
+# Store script arguments for dry-run detection
+SCRIPT_ARGS="$*"
+
+# Output control flags
+VERBOSE=0
+QUIET=0
+
+LOGO="
+                 ..
+                ,cc:;;,'...
+                .,;::cclllc:;,'.
+           .''...   ....',;:clc'
+          .;lllcc:;,,'...  .,cl:.
+           ...',;:clllllc;. .:lc'
+      ,:;,,....   ....,cll'  ,cl:.
+     .,::clllcc:;,'.   'cl:. .:lc'
+        ....,;cllll:,. .:ll,  'cl:.
+            .':lllllc,  'cl:. ....
+           ':ll:,;cll:. .;ll,
+         .:clc,. .;lll,  'cc,.
+        .:lc,.    'cll:.  ..
+         ...      .;lll,
+                   .,,,.
+";
+
+usage() {
+    cat << EOF
+amp-install ${SCRIPT_VERSION}
+
+USAGE:
+    install.sh [OPTIONS]
+
+DESCRIPTION:
+    Downloads and installs the Amp CLI tool for your platform.
+    Amp is an agentic coding tool, in research preview from Sourcegraph.
+
+OPTIONS:
+    -h, --help          Show this help message and exit
+    -V, --version       Show version information and exit
+    --doctor            Show system diagnostics for troubleshooting
+    -v, --verbose       Enable verbose output
+    -q, --quiet         Disable progress output (quiet mode)
+    --dry-run           Show what would be done without executing
+    --no-confirm        Skip interactive prompts and use defaults
+
+ENVIRONMENT VARIABLES:
+    AMP_BINARY_ROOT     Override the binary download URL root
+                        (default: https://packages.ampcode.com/binaries)
+    AMP_OVERRIDE_URL    Override the complete binary download URL
+    AMP_DRY_RUN         Enable dry-run mode (same as --dry-run)
+    AMP_NO_CONFIRM      Skip confirmation prompts (same as --no-confirm)
+    HTTP_PROXY          HTTP proxy server URL
+    HTTPS_PROXY         HTTPS proxy server URL
+    NO_PROXY            Comma-separated list of hosts to bypass proxy
+
+EXAMPLES:
+    # Standard installation
+    curl -fsSL https://packages.ampcode.com/install.sh | sh
+
+    # Dry run to see what would happen
+    ./install.sh --dry-run
+
+    # Quiet installation with no prompts
+    ./install.sh --quiet --no-confirm
+
+    # Verbose installation to see detailed output
+    ./install.sh --verbose
+
+    # Run system diagnostics for troubleshooting
+    ./install.sh --doctor
+
+For more information, visit: https://ampcode.com/manual
+EOF
 }
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
+version() {
+    echo "amp-install ${SCRIPT_VERSION}"
+    echo "Platform: $(uname -s) $(uname -m)"
+    echo "Shell: $0"
 }
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Detect OS and architecture
-detect_os() {
-    OS=""
-    ARCH=""
-
-    # Detect OS
-    if [[ $OSTYPE == "linux-gnu"* ]]; then
-        OS="linux"
-    elif [[ $OSTYPE == "darwin"* ]]; then
-        OS="darwin"
-    elif [[ $OSTYPE == "msys" ]] || [[ $OSTYPE == "cygwin" ]]; then
-        OS="windows"
+doctor() {
+    echo "amp-install ${SCRIPT_VERSION} - System Diagnostics"
+    echo "=================================================="
+    echo ""
+    
+    # Basic system information
+    echo "System Information:"
+    echo "  OS: $(uname -s)"
+    echo "  Architecture: $(uname -m)"
+    echo "  Kernel: $(uname -r)"
+    if command -v sw_vers >/dev/null 2>&1; then
+        echo "  macOS Version: $(sw_vers -productVersion)"
+    fi
+    echo "  Shell: $0"
+    echo "  User: $(whoami)"
+    echo "  Working Directory: $(pwd)"
+    echo ""
+    
+    # Detected architecture
+    echo "Architecture Detection:"
+    get_architecture
+    echo "  Detected: $RETVAL"
+    echo ""
+    
+    # OS Detection
+    echo "Operating System Detection:"
+    if is_macos; then
+        echo "  macOS: ✓"
     else
-        print_error "Unsupported operating system: $OSTYPE"
-        exit 1
+        echo "  macOS: ✗"
+    fi
+    
+    if is_windows; then
+        echo "  Windows: ✓"
+    else
+        echo "  Windows: ✗"
+    fi
+    
+    if is_wsl; then
+        echo "  WSL: ✓"
+    else
+        echo "  WSL: ✗"
+    fi
+    
+    if is_archlinux; then
+        echo "  Arch Linux: ✓"
+    else
+        echo "  Arch Linux: ✗"
+    fi
+    
+    if is_nixos; then
+        echo "  NixOS: ✓"
+    else
+        echo "  NixOS: ✗"
+    fi
+    
+    if is_debian; then
+        echo "  Debian/Ubuntu: ✓"
+    else
+        echo "  Debian/Ubuntu: ✗"
+    fi
+    
+    if is_ubuntu; then
+        echo "  Ubuntu: ✓"
+    else
+        echo "  Ubuntu: ✗"
+    fi
+    echo ""
+    
+    # Package Managers
+    echo "Package Managers:"
+    if has_homebrew; then
+        echo "  Homebrew: ✓ ($(brew --version 2>/dev/null | head -1))"
+    else
+        echo "  Homebrew: ✗"
+    fi
+    
+    if has_nix; then
+        echo "  Nix: ✓ ($(nix --version 2>/dev/null || nix-env --version 2>/dev/null | head -1))"
+    else
+        echo "  Nix: ✗"
+    fi
+    
+    if has_npm; then
+        echo "  npm: ✓ ($(npm --version 2>/dev/null))"
+    else
+        echo "  npm: ✗"
+    fi
+    
+    if has_yarn; then
+        echo "  yarn: ✓ ($(yarn --version 2>/dev/null))"
+    else
+        echo "  yarn: ✗"
+    fi
+    
+    if has_pnpm; then
+        echo "  pnpm: ✓ ($(pnpm --version 2>/dev/null))"
+    else
+        echo "  pnpm: ✗"
+    fi
+    
+    if has_choco; then
+        echo "  Chocolatey: ✓ ($(choco --version 2>/dev/null | head -1))"
+    else
+        echo "  Chocolatey: ✗"
+    fi
+    echo ""
+    
+    # Required commands
+    echo "Required Commands:"
+    local _commands="curl wget mktemp chmod mkdir rm rmdir uname"
+    for cmd in $_commands; do
+        if check_cmd "$cmd"; then
+            echo "  $cmd: ✓ ($(command -v "$cmd"))"
+        else
+            echo "  $cmd: ✗ (required)"
+        fi
+    done
+    echo ""
+    
+    # Environment Variables
+    echo "Environment Variables:"
+    echo "  AMP_BINARY_ROOT: ${AMP_BINARY_ROOT:-<default>}"
+    echo "  AMP_OVERRIDE_URL: ${AMP_OVERRIDE_URL:-<not set>}"
+    echo "  AMP_DRY_RUN: ${AMP_DRY_RUN:-<not set>}"
+    echo "  AMP_NO_CONFIRM: ${AMP_NO_CONFIRM:-<not set>}"
+    echo "  HTTP_PROXY: ${HTTP_PROXY:-<not set>}"
+    echo "  HTTPS_PROXY: ${HTTPS_PROXY:-<not set>}"
+    echo "  NO_PROXY: ${NO_PROXY:-<not set>}"
+    echo "  TERM: ${TERM:-<not set>}"
+    echo "  PATH: $PATH"
+    echo ""
+    
+    # Network connectivity test
+    echo "Network Connectivity:"
+    if command -v curl >/dev/null 2>&1; then
+        if curl -s --connect-timeout 5 "$AMP_BINARY_ROOT/" >/dev/null 2>&1; then
+            echo "  Binary root accessible: ✓ ($AMP_BINARY_ROOT)"
+        else
+            echo "  Binary root accessible: ✗ ($AMP_BINARY_ROOT)"
+        fi
+    else
+        echo "  Cannot test connectivity: curl not available"
+    fi
+    echo ""
+    
+    # Download URL that would be used
+    local _arch="$RETVAL"
+    local _ext=""
+    case "$_arch" in
+        *windows*)
+            _ext=".exe"
+            ;;
+    esac
+    local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
+    echo "Download Information:"
+    echo "  Target URL: $_url"
+    echo "  Binary name: amp${_ext}"
+    echo ""
+    
+    # Temporary directory test
+    echo "System Tests:"
+    local _test_dir
+    if _test_dir="$(mktemp -d 2>/dev/null)"; then
+        echo "  Temp directory creation: ✓ ($_test_dir)"
+        rmdir "$_test_dir" 2>/dev/null
+    else
+        echo "  Temp directory creation: ✗"
+    fi
+    
+    # File permissions test
+    if [ -w "$(pwd)" ]; then
+        echo "  Current directory writable: ✓"
+    else
+        echo "  Current directory writable: ✗"
+    fi
+    
+    echo ""
+    echo "Diagnostics complete. Share this output when reporting issues."
+}
+
+main() {
+    # Parse arguments first to set QUIET/VERBOSE flags
+    local need_tty=yes
+    local dry_run=no
+    for arg in "$@"; do
+        case "$arg" in
+            --help|-h)
+                print_logo
+                usage
+                exit 0
+                ;;
+            --version|-V)
+                print_logo
+                version
+                exit 0
+                ;;
+            --doctor)
+                doctor
+                exit 0
+                ;;
+            --verbose|-v)
+                VERBOSE=1
+                ;;
+            --quiet|-q)
+                QUIET=1
+                ;;
+            --no-confirm)
+                need_tty=no
+                ;;
+            --dry-run)
+                dry_run=yes
+                ;;
+            *)
+                continue
+                ;;
+        esac
+    done
+
+    # Check environment variables
+    if [ "${AMP_NO_CONFIRM-}" ]; then
+        need_tty=no
+    fi
+    if [ "${AMP_DRY_RUN-}" ]; then
+        dry_run=yes
     fi
 
-    # Detect architecture
-    case $(uname -m) in
-    x86_64 | amd64)
-        ARCH="x64"
-        ;;
-    aarch64 | arm64)
-        ARCH="arm64"
-        ;;
-    *)
-        print_error "Unsupported architecture: $(uname -m)"
-        exit 1
-        ;;
+    # Now print logo (respects QUIET flag)
+    print_logo
+
+    need_cmd uname
+    need_cmd mktemp
+    need_cmd chmod
+    need_cmd mkdir
+    need_cmd rm
+    need_cmd rmdir
+    need_cmd curl
+
+    get_architecture || return 1
+    local _arch="$RETVAL"
+    assert_nz "$_arch" "arch"
+
+    local _ext=""
+    case "$_arch" in
+        *windows*)
+            _ext=".exe"
+            ;;
     esac
 
-    print_status "Detected OS: $OS, Architecture: $ARCH"
-}
+    local _url="${AMP_OVERRIDE_URL-${AMP_BINARY_ROOT}/amp-${_arch}${_ext}}"
 
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+    local _dir
+    if ! _dir="$(run_cmd mktemp -d)"; then
+        # Because the previous command ran in a subshell, we must manually
+        # propagate exit status.
+        exit 1
+    fi
+    local _file="${_dir}/amp${_ext}"
 
-# Install using Homebrew (macOS/Linux)
-install_homebrew() {
-    print_status "Installing via Homebrew..."
-
-    if ! command_exists brew; then
-        print_error "Homebrew is not installed. Please install Homebrew first or use manual installation."
-        return 1
+    local _ansi_escapes_are_valid=false
+    if [ -t 2 ]; then
+        if [ "${TERM+set}" = 'set' ]; then
+            case "$TERM" in
+                xterm*|rxvt*|urxvt*|linux*|vt*)
+                    _ansi_escapes_are_valid=true
+                ;;
+            esac
+        fi
     fi
 
-    brew tap sourcegraph/amp-cli https://github.com/sourcegraph/amp-cli
-    brew install amp
-    return 0
-}
 
-# Install using Nix
-install_nix() {
-    print_status "Installing via Nix..."
 
-    if ! command_exists nix; then
-        print_error "Nix is not installed."
-        return 1
-    fi
-
-    nix profile install github:sourcegraph/amp-cli
-    return 0
-}
-
-# Install using AUR helpers (Arch Linux)
-install_aur() {
-    print_status "Installing via AUR..."
-
-    if command_exists yay; then
-        yay -S sourcegraph-amp
-        return 0
-    elif command_exists paru; then
-        paru -S sourcegraph-amp
-        return 0
-    else
-        print_warning "No AUR helper found (yay/paru). Trying manual AUR installation..."
-        if command_exists git && command_exists makepkg; then
-            tmpdir=$(mktemp -d)
-            cd "$tmpdir"
-            git clone https://aur.archlinux.org/sourcegraph-amp.git
-            cd sourcegraph-amp
-            makepkg -si --noconfirm
-            cd /
-            rm -rf "$tmpdir"
-            return 0
+    if [ "$QUIET" -eq 0 ]; then
+        if $_ansi_escapes_are_valid; then
+            printf "\33[1minfo:\33[0m downloading amp \33[4m%s\33[0m\n" "$_url" 1>&2
         else
-            print_error "git or makepkg not found. Cannot install from AUR."
-            return 1
-        fi
-    fi
-}
-
-# Setup apt repository and install (Debian/Ubuntu)
-install_deb() {
-    print_status "Setting up apt repository and installing..."
-
-    # Add repository key
-    print_status "Adding repository GPG key..."
-    if command_exists curl; then
-        curl -fsSL https://packages.ampcode.com/binaries/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
-    elif command_exists wget; then
-        wget -qO- https://packages.ampcode.com/binaries/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
-    else
-        print_error "Neither curl nor wget found. Cannot download GPG key."
-        return 1
-    fi
-
-    # Add repository source
-    print_status "Adding apt repository..."
-    echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/binaries/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
-
-    # Update package list and install
-    print_status "Updating package list..."
-    sudo apt update
-
-    print_status "Installing amp..."
-    sudo apt install -y amp
-
-    return 0
-}
-
-# Fallback: Install .deb package directly
-install_deb_direct() {
-    print_status "Installing via direct .deb package download..."
-
-    local deb_url="https://packages.ampcode.com/binaries/v${VERSION}/amp_${VERSION}-1_${ARCH}.deb"
-    local deb_file="/tmp/amp_${VERSION}-1_${ARCH}.deb"
-
-    print_status "Downloading $deb_url..."
-    if command_exists curl; then
-        curl -fsSL -o "$deb_file" "$deb_url"
-    elif command_exists wget; then
-        wget -q -O "$deb_file" "$deb_url"
-    else
-        print_error "Neither curl nor wget found. Cannot download package."
-        return 1
-    fi
-
-    print_status "Installing package..."
-    if command_exists apt; then
-        sudo apt install -y "$deb_file"
-    else
-        sudo dpkg -i "$deb_file"
-        sudo apt-get install -f -y || true
-    fi
-
-    rm -f "$deb_file"
-    return 0
-}
-
-# Setup yum/dnf repository and install (RHEL/CentOS/Fedora)
-install_rpm() {
-    print_status "Setting up yum/dnf repository and installing..."
-
-    # Add repository GPG key
-    print_status "Adding repository GPG key..."
-    sudo rpm --import https://packages.ampcode.com/binaries/gpg/amp-cli.asc
-
-    # Add repository configuration
-    print_status "Adding yum/dnf repository..."
-    sudo tee /etc/yum.repos.d/amp-cli.repo >/dev/null <<EOF
-[amp-cli]
-name=Amp CLI Repository
-baseurl=https://packages.ampcode.com/binaries/rpm/
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.ampcode.com/binaries/gpg/amp-cli.asc
-EOF
-
-    # Install package
-    print_status "Installing amp..."
-    if command_exists dnf; then
-        sudo dnf install -y amp
-    elif command_exists yum; then
-        sudo yum install -y amp
-    else
-        print_error "No package manager found (dnf/yum)."
-        return 1
-    fi
-
-    return 0
-}
-
-# Fallback: Install .rpm package directly
-install_rpm_direct() {
-    print_status "Installing via direct .rpm package download..."
-
-    local rpm_arch
-    if [[ $ARCH == "x64" ]]; then
-        rpm_arch="x86_64"
-    else
-        rpm_arch="aarch64"
-    fi
-
-    local rpm_url="https://packages.ampcode.com/binaries/v${VERSION}/amp-${VERSION}-1.${rpm_arch}.rpm"
-
-    print_status "Installing from $rpm_url..."
-    if command_exists dnf; then
-        sudo dnf install -y "$rpm_url"
-    elif command_exists yum; then
-        sudo yum install -y "$rpm_url"
-    elif command_exists rpm; then
-        local rpm_file="/tmp/amp-${VERSION}-1.${rpm_arch}.rpm"
-        if command_exists curl; then
-            curl -fsSL -o "$rpm_file" "$rpm_url"
-        elif command_exists wget; then
-            wget -q -O "$rpm_file" "$rpm_url"
-        else
-            print_error "Neither curl nor wget found. Cannot download package."
-            return 1
-        fi
-        sudo rpm -ivh "$rpm_file"
-        rm -f "$rpm_file"
-    else
-        print_error "No RPM package manager found (dnf/yum/rpm)."
-        return 1
-    fi
-
-    return 0
-}
-
-# Install using Chocolatey (Windows)
-install_chocolatey() {
-    print_status "Installing via Chocolatey..."
-
-    if ! command_exists choco; then
-        print_error "Chocolatey is not installed."
-        return 1
-    fi
-
-    choco install amp -y
-    return 0
-}
-
-# Manual binary installation
-install_manual() {
-    print_status "Installing manually via binary download..."
-
-    local binary_url="https://packages.ampcode.com/binaries/v${VERSION}/amp-${OS}-${ARCH}"
-    local install_dir="/usr/local/bin"
-
-    # Use user bin directory if not root
-    if [[ $EUID -ne 0 ]]; then
-        install_dir="$HOME/.local/bin"
-        mkdir -p "$install_dir"
-    fi
-
-    print_status "Downloading $binary_url..."
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    local binary_file="$tmpdir/amp"
-
-    if command_exists curl; then
-        curl -fsSL -o "$binary_file" "$binary_url"
-    elif command_exists wget; then
-        wget -q -O "$binary_file" "$binary_url"
-    else
-        print_error "Neither curl nor wget found. Cannot download binary."
-        return 1
-    fi
-
-    print_status "Installing to $install_dir..."
-    chmod +x "$binary_file"
-
-    if [[ $EUID -eq 0 ]]; then
-        cp "$binary_file" "$install_dir/amp"
-    else
-        cp "$binary_file" "$install_dir/amp"
-
-        # Add to PATH if not already there
-        if [[ ":$PATH:" != *":$install_dir:"* ]]; then
-            echo ""
-            print_warning "The amp binary was installed to $install_dir, which is not in your PATH."
-            echo "To make 'amp' available in your shell, we need to add the following line to your shell configuration files:"
-            echo ""
-            echo '    export PATH="$HOME/.local/bin:$PATH"'
-            echo ""
-            echo "This will be added to:"
-            [[ -f "$HOME/.bashrc" ]] && echo "  - $HOME/.bashrc"
-            [[ -f "$HOME/.zshrc" ]] && echo "  - $HOME/.zshrc"
-            echo ""
-            read -p "Do you want to add this to your shell configuration files? (y/N): " -n 1 -r
-            echo ""
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                print_status "Adding $install_dir to PATH in shell configuration files..."
-                if [[ -f "$HOME/.bashrc" ]]; then
-                    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.bashrc"
-                fi
-                if [[ -f "$HOME/.zshrc" ]]; then
-                    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.zshrc" 2>/dev/null || true
-                fi
-                print_success "Shell configuration files updated successfully!"
-                print_warning "Please restart your shell or run 'source ~/.bashrc' (or 'source ~/.zshrc') to apply the changes."
-            else
-                print_warning "Shell configuration not modified. You can manually add the following line to your ~/.bashrc or ~/.zshrc:"
-                echo '    export PATH="$HOME/.local/bin:$PATH"'
-                print_warning "Or use the full path: $install_dir/amp"
-            fi
+            printf 'info: downloading amp (%s)\n' "$_url" 1>&2
         fi
     fi
 
-    cd /
-    rm -rf "$tmpdir"
-    return 0
-}
+    verbose "Platform detected: $_arch"
+    verbose "Download URL: $_url"
+    verbose "Target file: $_file"
 
-# Detect Linux distribution
-detect_linux_distro() {
-    if [[ -f /etc/os-release ]]; then
-        # shellcheck source=/dev/null
-        . /etc/os-release
-        echo "$ID"
-    elif [[ -f /etc/debian_version ]]; then
-        echo "debian"
-    elif [[ -f /etc/redhat-release ]]; then
-        echo "rhel"
-    elif [[ -f /etc/arch-release ]]; then
-        echo "arch"
-    else
-        echo "unknown"
-    fi
-}
+    run_cmd mkdir -p "$_dir"
+    run_cmd curl -L -o "$_file" "$_url"
+    run_cmd chmod u+x "$_file"
 
-# Main installation logic
-main() {
-    print_status "Amp CLI Universal Installer"
-    print_status "Version: $VERSION"
-    echo
-
-    detect_os
-
-    # Try different installation methods based on OS and available tools
-    if [[ $OS == "darwin" ]]; then
-        # macOS
-        if install_homebrew; then
-            print_success "Successfully installed Amp via Homebrew!"
-        elif install_nix; then
-            print_success "Successfully installed Amp via Nix!"
-        elif install_manual; then
-            print_success "Successfully installed Amp manually!"
-        else
-            print_error "Failed to install Amp. Please install manually."
-            exit 1
-        fi
-
-    elif [[ $OS == "linux" ]]; then
-        # Linux - detect distribution
-        distro=$(detect_linux_distro)
-        print_status "Detected Linux distribution: $distro"
-
-        case "$distro" in
-        arch | manjaro)
-            if install_aur; then
-                print_success "Successfully installed Amp via AUR!"
-            elif install_nix; then
-                print_success "Successfully installed Amp via Nix!"
-            elif install_manual; then
-                print_success "Successfully installed Amp manually!"
-            else
-                print_error "Failed to install Amp. Please install manually."
-                exit 1
-            fi
-            ;;
-        ubuntu | debian | pop | elementary)
-            if install_deb; then
-                print_success "Successfully installed Amp via apt repository!"
-            elif install_deb_direct; then
-                print_success "Successfully installed Amp via .deb package!"
-            elif install_nix; then
-                print_success "Successfully installed Amp via Nix!"
-            elif install_homebrew; then
-                print_success "Successfully installed Amp via Homebrew!"
-            elif install_manual; then
-                print_success "Successfully installed Amp manually!"
-            else
-                print_error "Failed to install Amp. Please install manually."
-                exit 1
-            fi
-            ;;
-        fedora | rhel | centos | rocky | almalinux)
-            if install_rpm; then
-                print_success "Successfully installed Amp via yum/dnf repository!"
-            elif install_rpm_direct; then
-                print_success "Successfully installed Amp via .rpm package!"
-            elif install_nix; then
-                print_success "Successfully installed Amp via Nix!"
-            elif install_homebrew; then
-                print_success "Successfully installed Amp via Homebrew!"
-            elif install_manual; then
-                print_success "Successfully installed Amp manually!"
-            else
-                print_error "Failed to install Amp. Please install manually."
-                exit 1
-            fi
-            ;;
-        *)
-            # Unknown Linux distro - try common methods
-            if install_nix; then
-                print_success "Successfully installed Amp via Nix!"
-            elif install_homebrew; then
-                print_success "Successfully installed Amp via Homebrew!"
-            elif install_manual; then
-                print_success "Successfully installed Amp manually!"
-            else
-                print_error "Failed to install Amp. Please install manually."
-                exit 1
-            fi
-            ;;
-        esac
-
-    elif [[ $OS == "windows" ]]; then
-        # Windows
-        if install_chocolatey; then
-            print_success "Successfully installed Amp via Chocolatey!"
-        else
-            print_error "Failed to install Amp. Please install manually using Chocolatey."
-            exit 1
-        fi
-
-    else
-        print_error "Unsupported operating system: $OS"
+    if [ "$dry_run" = "no" ] && [ ! -x "$_file" ]; then
+        printf '%s\n' "Cannot execute $_file (likely because of mounting /tmp as noexec)." 1>&2
+        printf '%s\n' "Please copy the file to a location where you can execute binaries and run ./amp${_ext}." 1>&2
         exit 1
     fi
 
-    echo
-    print_success "Amp CLI has been installed successfully!"
-    print_status "Run 'amp --help' to get started."
+    if [ "$dry_run" = "yes" ]; then
+        run_cmd "$_file" "$@"
+    elif [ "$need_tty" = "yes" ] && [ ! -t 0 ]; then
+        # The installer is going to want to ask for confirmation by
+        # reading stdin.  This script was piped into `sh` though and
+        # doesn't have stdin to pass to its children. Instead we're going
+        # to explicitly connect /dev/tty to the installer's stdin.
+        if [ ! -t 1 ]; then
+            err "Unable to run interactively. Run with --dry-run to see what would be executed, --no-confirm to accept defaults, --help for additional options"
+        fi
 
-    # Check if amp is in PATH
-    if ! command_exists amp; then
-        print_warning "amp command not found in PATH. You may need to restart your shell or add the installation directory to your PATH."
+        run_cmd "$_file" "$@" < /dev/tty
+    else
+        run_cmd "$_file" "$@"
+    fi
+
+    local _retval=$?
+
+    run_cmd rm "$_file"
+    run_cmd rmdir "$_dir"
+
+    return "$_retval"
+}
+
+get_architecture() {
+    local _ostype _cputype _arch
+    _ostype="$(uname -s)"
+    _cputype="$(uname -m)"
+
+    if [ "$_ostype" = Linux ]; then
+        if [ "$(uname -o)" = Android ]; then
+            _ostype=Android
+        fi
+    fi
+
+    if [ "$_ostype" = Darwin ]; then
+        # Darwin `uname -m` can lie due to Rosetta shenanigans. If you manage to
+        # invoke a native shell binary and then a native uname binary, you can
+        # get the real answer, but that's hard to ensure, so instead we use
+        # `sysctl` (which doesn't lie) to check for the actual architecture.
+        if [ "$_cputype" = i386 ]; then
+            # Handling i386 compatibility mode in older macOS versions (<10.15)
+            # running on x86_64-based Macs.
+            # Starting from 10.15, macOS explicitly bans all i386 binaries from running.
+            # See: <https://support.apple.com/en-us/HT208436>
+
+            # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
+            if sysctl hw.optional.x86_64 2> /dev/null || true | grep -q ': 1'; then
+                _cputype=x86_64
+            fi
+        elif [ "$_cputype" = x86_64 ]; then
+            # Handling x86-64 compatibility mode (a.k.a. Rosetta 2)
+            # in newer macOS versions (>=11) running on arm64-based Macs.
+            # Rosetta 2 is built exclusively for x86-64 and cannot run i386 binaries.
+
+            # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
+            if sysctl hw.optional.arm64 2> /dev/null || true | grep -q ': 1'; then
+                _cputype=arm64
+            fi
+        fi
+    fi
+
+    case "$_ostype" in
+        Linux)
+            _ostype=linux
+            ;;
+
+        Darwin)
+            _ostype=darwin
+            ;;
+
+        *)
+            err "unrecognized OS type: $_ostype"
+            ;;
+
+    esac
+
+    case "$_cputype" in
+        aarch64 | arm64)
+            _cputype=aarch64
+            ;;
+
+        x86_64 | x86-64 | x64 | amd64)
+            _cputype=x86_64
+            ;;
+
+        *)
+            err "unknown CPU type: $_cputype"
+            ;;
+
+    esac
+
+    _arch="${_cputype}-${_ostype}"
+
+    RETVAL="$_arch"
+}
+
+say() {
+    if [ "$QUIET" -eq 0 ]; then
+        printf 'amp-install: %s\n' "$1"
     fi
 }
 
-# Run main function
-main "$@"
+verbose() {
+    if [ "$VERBOSE" -eq 1 ]; then
+        printf 'amp-install (verbose): %s\n' "$1" >&2
+    fi
+}
+
+err() {
+    printf 'amp-install: %s\n' "$1" >&2
+    exit 1
+}
+
+need_cmd() {
+    if ! check_cmd "$1"; then
+        err "need '$1' (command not found)"
+    fi
+}
+
+check_cmd() {
+    command -v "$1" > /dev/null 2>&1
+}
+
+assert_nz() {
+    if [ -z "$1" ]; then err "assert_nz $2"; fi
+}
+
+# Run a command that should never fail. If the command fails execution
+# will immediately terminate with an error showing the failing
+# command.
+ensure() {
+    if ! "$@"; then err "command failed: $*"; fi
+}
+
+# Run a command, with dry-run support
+run_cmd() {
+    # Check for dry-run flag in arguments to main script
+    for arg in $SCRIPT_ARGS; do
+        if [ "$arg" = "--dry-run" ]; then
+            printf 'would run: %s\n' "$*" 1>&2
+            return 0
+        fi
+    done
+
+    if [ "${AMP_DRY_RUN-}" ]; then
+        printf 'would run: %s\n' "$*" 1>&2
+        return 0
+    else
+        verbose "Running: $*"
+        "$@"
+    fi
+}
+
+print_logo() {
+    if [ "$QUIET" -eq 1 ]; then
+        return
+    fi
+
+    # Only use colors if terminal supports them
+    if [ -t 1 ] && [ "${TERM+set}" = 'set' ]; then
+        case "$TERM" in
+            xterm*|rxvt*|urxvt*|linux*|vt*)
+                RED='\033[0;31m'
+                NC='\033[0m'
+                printf "${RED}${LOGO}${NC}\n"
+                ;;
+            *)
+                printf "${LOGO}\n"
+                ;;
+        esac
+    else
+        printf "${LOGO}\n"
+    fi
+    printf "Amp - An agentic coding tool, in research preview from Sourcegraph\n\n"
+}
+
+# Package manager detection functions
+has_homebrew() {
+    check_cmd brew
+}
+
+has_nix() {
+    check_cmd nix-env || check_cmd nix
+}
+
+has_pnpm() {
+    check_cmd pnpm
+}
+
+has_yarn() {
+    check_cmd yarn
+}
+
+has_npm() {
+    check_cmd npm
+}
+
+has_choco() {
+    check_cmd choco
+}
+
+# Operating system detection functions
+is_archlinux() {
+    [ -f /etc/arch-release ] || [ -f /etc/archlinux-release ]
+}
+
+is_nixos() {
+    [ -f /etc/NIXOS ] || [ -f /etc/nixos/configuration.nix ]
+}
+
+is_debian() {
+    [ -f /etc/debian_version ] || [ -f /etc/lsb-release ] && grep -q "Ubuntu\|Debian" /etc/lsb-release 2>/dev/null
+}
+
+is_ubuntu() {
+    [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null
+}
+
+is_windows() {
+    case "$(uname -s)" in
+        CYGWIN*|MINGW*|MSYS*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+is_wsl() {
+    # Check for WSL indicators
+    [ -f /proc/version ] && grep -q "Microsoft\|WSL" /proc/version 2>/dev/null
+}
+
+is_macos() {
+    [ "$(uname -s)" = "Darwin" ]
+}
+
+main "$@" || exit 1

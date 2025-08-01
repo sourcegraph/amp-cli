@@ -17,7 +17,7 @@
     <bugTrackerUrl>https://ampode.com/manual</bugTrackerUrl>
     <tags>amp ai cli coding development assistant productivity anthropic sourcegraph</tags>
     <dependencies>
-      <dependency id="ripgrep" version="14.0.0" />
+      <dependency id="ripgrep" version="14.1.0" />
     </dependencies>
     <summary>An agentic coding tool, in research preview from Sourcegraph</summary>
     <description><![CDATA[Amp is an agentic coding tool engineered to maximize what’s possible with today’s frontier models—autonomous reasoning, comprehensive code editing, and complex task execution.]]></description>

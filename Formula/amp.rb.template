@@ -3,27 +3,27 @@
 # Amp CLI - An agentic coding tool, in research preview from Sourcegraph
 class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
-  homepage 'https://github.com/sourcegraph/amp-cli'
-  url 'https://github.com/sourcegraph/amp-cli/releases/download/vVERSION_PLACEHOLDER/amp-darwin-arm64'
+  homepage 'https://ampcode.com'
+  url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64'
   sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
   version 'VERSION_PLACEHOLDER'
 
   on_macos do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/vVERSION_PLACEHOLDER/amp-darwin-arm64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-arm64'
       sha256 'REPLACE_WITH_DARWIN_ARM64_SHA256'
     else
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/vVERSION_PLACEHOLDER/amp-darwin-x64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-darwin-x64'
       sha256 'REPLACE_WITH_DARWIN_AMD64_SHA256'
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/vVERSION_PLACEHOLDER/amp-linux-arm64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-linux-arm64'
       sha256 'REPLACE_WITH_LINUX_ARM64_SHA256'
     else
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/vVERSION_PLACEHOLDER/amp-linux-x64'
+      url 'https://packages.ampcode.com/binaries/vVERSION_PLACEHOLDER/amp-linux-x64'
       sha256 'REPLACE_WITH_LINUX_AMD64_SHA256'
     end
   end

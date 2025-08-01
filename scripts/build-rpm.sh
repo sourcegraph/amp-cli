@@ -23,7 +23,7 @@ echo "$DEB_GPG_PUBLIC_KEY" | gpg --batch --import
 # Build for the specified architecture
 arch="$ARCH"
   echo "Building RPM package for $arch"
-  
+
   # Download release binary
   if [ "$arch" = "x86_64" ]; then
     asset_name="amp-linux-x64"
@@ -31,8 +31,8 @@ arch="$ARCH"
     asset_name="amp-linux-arm64"
   fi
 
-  wget "https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/${asset_name}"
-  
+  wget "https://packages.ampcode.com/binaries/v${VERSION}/${asset_name}"
+
   # Create a tar.gz file for the RPM build process with RPM-compatible directory name
   rpm_version=$(echo "${VERSION}" | sed 's/-/./g')
   mkdir -p amp-${rpm_version}

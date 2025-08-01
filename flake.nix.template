@@ -38,7 +38,7 @@
           inherit version;
 
           src = pkgs.fetchurl {
-            url = "https://github.com/sourcegraph/amp-cli/releases/download/v${version}/amp-${arch}";
+            url = "https://packages.ampcode.com/binaries/v${version}/amp-${arch}";
             sha256 = shaMap.${arch};
           };
 

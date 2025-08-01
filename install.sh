@@ -133,9 +133,9 @@ install_deb() {
     # Add repository key
     print_status "Adding repository GPG key..."
     if command_exists curl; then
-        curl -fsSL https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+        curl -fsSL https://packages.ampcode.com/binaries/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
     elif command_exists wget; then
-        wget -qO- https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+        wget -qO- https://packages.ampcode.com/binaries/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
     else
         print_error "Neither curl nor wget found. Cannot download GPG key."
         return 1
@@ -143,7 +143,7 @@ install_deb() {
 
     # Add repository source
     print_status "Adding apt repository..."
-    echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://github.com/sourcegraph/amp-cli/releases/download/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
+    echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/binaries/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
 
     # Update package list and install
     print_status "Updating package list..."
@@ -159,7 +159,7 @@ install_deb() {
 install_deb_direct() {
     print_status "Installing via direct .deb package download..."
 
-    local deb_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp_${VERSION}-1_${ARCH}.deb"
+    local deb_url="https://packages.ampcode.com/binaries/v${VERSION}/amp_${VERSION}-1_${ARCH}.deb"
     local deb_file="/tmp/amp_${VERSION}-1_${ARCH}.deb"
 
     print_status "Downloading $deb_url..."
@@ -190,17 +190,17 @@ install_rpm() {
 
     # Add repository GPG key
     print_status "Adding repository GPG key..."
-    sudo rpm --import https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc
+    sudo rpm --import https://packages.ampcode.com/binaries/gpg/amp-cli.asc
 
     # Add repository configuration
     print_status "Adding yum/dnf repository..."
     sudo tee /etc/yum.repos.d/amp-cli.repo >/dev/null <<EOF
 [amp-cli]
 name=Amp CLI Repository
-baseurl=https://github.com/sourcegraph/amp-cli/releases/download/rpm/
+baseurl=https://packages.ampcode.com/binaries/rpm/
 enabled=1
 gpgcheck=1
-gpgkey=https://github.com/sourcegraph/amp-cli/releases/download/gpg/amp-cli.asc
+gpgkey=https://packages.ampcode.com/binaries/gpg/amp-cli.asc
 EOF
 
     # Install package
@@ -228,7 +228,7 @@ install_rpm_direct() {
         rpm_arch="aarch64"
     fi
 
-    local rpm_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp-${VERSION}-1.${rpm_arch}.rpm"
+    local rpm_url="https://packages.ampcode.com/binaries/v${VERSION}/amp-${VERSION}-1.${rpm_arch}.rpm"
 
     print_status "Installing from $rpm_url..."
     if command_exists dnf; then
@@ -272,7 +272,7 @@ install_chocolatey() {
 install_manual() {
     print_status "Installing manually via binary download..."
 
-    local binary_url="https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/amp-${OS}-${ARCH}"
+    local binary_url="https://packages.ampcode.com/binaries/v${VERSION}/amp-${OS}-${ARCH}"
     local install_dir="/usr/local/bin"
 
     # Use user bin directory if not root

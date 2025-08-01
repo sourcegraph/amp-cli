@@ -1,4 +1,4 @@
-# Maintainer: Sourcegraph <support@sourcegraph.com>
+# Maintainer: Sourcegraph <amp-devs@sourcegraph.com>
 
 pkgbase=ampcode
 pkgname=ampcode
@@ -14,8 +14,8 @@ replaces=('sourcegraph-amp' 'ampcode-com')
 conflicts=('amp')
 options=('!strip')
 
-source_x86_64=("amp-0.0.1754024802-x86_64::https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754024802/amp-linux-x64")
-source_aarch64=("amp-0.0.1754024802-aarch64::https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754024802/amp-linux-arm64")
+source_x86_64=("amp-0.0.1754024802-x86_64::https://packages.ampcode.com/binaries/v0.0.1754024802/amp-linux-x64")
+source_aarch64=("amp-0.0.1754024802-aarch64::https://packages.ampcode.com/binaries/v0.0.1754024802/amp-linux-arm64")
 
 sha256sums_x86_64=('aabef5e6484aed7d2226f23160a3e08e98a0a9fe178f47c10ac25decde966f4e')
 sha256sums_aarch64=('a1bb4b2a82d1bd94c68bc596e5b5bb356561c7f86835c6fca7be0603e1012161')

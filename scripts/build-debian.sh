@@ -19,7 +19,7 @@ echo "$DEB_GPG_PUBLIC_KEY" | gpg --batch --import
 # Build for the specified architecture
 arch="$ARCH"
   echo "Building .deb package for $arch"
-  
+
   # Set up architecture
   if [ "$arch" = "arm64" ]; then
     sudo apt-get update
@@ -33,7 +33,7 @@ arch="$ARCH"
     asset_name="amp-linux-arm64"
   fi
 
-  wget "https://github.com/sourcegraph/amp-cli/releases/download/v${VERSION}/${asset_name}"
+  wget "https://packages.ampcode.com/binaries/v${VERSION}/${asset_name}"
   chmod +x ${asset_name}
 
   # Create clean build directory for debian packaging

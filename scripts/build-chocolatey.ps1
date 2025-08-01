@@ -25,7 +25,7 @@ $CleanVersion = $Version -replace '-g[a-f0-9]+$', ''
     Set-Content chocolatey/amp.nuspec
 
 # Download the Windows executable to calculate checksum
-$WindowsExeUrl = "https://github.com/sourcegraph/amp-cli/releases/download/v$Version/amp-windows-x64.exe"
+$WindowsExeUrl = "https://packages.ampcode.com/binaries/v$Version/amp-windows-x64.exe"
 Write-Host "Downloading Windows executable from: $WindowsExeUrl"
 Invoke-WebRequest -Uri $WindowsExeUrl -OutFile "amp-windows-x64.exe"
 $WindowsChecksum = (Get-FileHash -Path "amp-windows-x64.exe" -Algorithm SHA256).Hash.ToLower()

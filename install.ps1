@@ -112,7 +112,7 @@ function Install-Manual {
 
     Write-Info "Installing manually via binary download..."
 
-    $binaryUrl = "https://github.com/sourcegraph/amp-cli/releases/download/v$Version/amp-windows-$Arch.zip"
+    $binaryUrl = "https://packages.ampcode.com/binaries/v$Version/amp-windows-$Arch.zip"
     $tempDir = [System.IO.Path]::GetTempPath()
     $zipFile = Join-Path $tempDir "amp-windows-$Arch.zip"
     $extractDir = Join-Path $tempDir "amp-extract"

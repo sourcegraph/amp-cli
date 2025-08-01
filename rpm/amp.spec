@@ -39,7 +39,7 @@ install -m 0755 amp %{buildroot}%{_bindir}/amp
 %{_bindir}/amp
 
 %changelog
-* Tue Jul 29 2025 Sourcegraph <support@sourcegraph.com> - 1.0.0-1
+* Tue Jul 29 2025 Sourcegraph <amp-devs@sourcegraph.com> - 1.0.0-1
 - Initial release
 - AI-powered coding assistant CLI tool
 - Cross-platform support for Linux, macOS, and Windows

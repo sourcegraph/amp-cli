@@ -1,8 +1,0 @@
-amp (1.0.0-1) unstable; urgency=medium
-
-  * Initial release
-  * AI-powered coding assistant CLI tool
-  * Cross-platform support for Linux, macOS, and Windows
-  * Ripgrep integration for fast code search
-
- -- Sourcegraph <support@sourcegraph.com>  Tue, 29 Jul 2025 00:00:00 +0000

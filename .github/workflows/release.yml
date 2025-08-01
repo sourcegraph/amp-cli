@@ -112,13 +112,13 @@ jobs:
           done
 
       - name: Notarize with Apple
-        if: ${{ env.MACOS_CERTIFICATE_P12 != '' && env.APPLE_API_KEY_ID != '' }}
+        if: ${{ env.MACOS_CERTIFICATE_P12 != '' && env.APPLE_NOTARIZE_KEY != '' }}
         env:
           AC_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           AC_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
-          AC_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+          AC_PRIVATE_KEY: ${{ secrets.APPLE_NOTARIZE_KEY }}
           MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_NOTARIZE_KEY: ${{ secrets.APPLE_NOTARIZE_KEY }}
         run: |
           echo "$AC_PRIVATE_KEY" | base64 --decode > /tmp/key.p8
           for f in binaries/amp-darwin-*; do

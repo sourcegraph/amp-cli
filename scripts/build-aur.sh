@@ -397,56 +397,70 @@ else
 fi
 
 # Update local repository with retry logic
-echo "Configuring local git..."
-git config --local user.email "amp@ampcode.com"
-git config --local user.name "Amp"
-echo "Local git configured"
+echo "Checking if we're inside a git repository..."
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Configuring local git..."
+  git config --local user.email "amp@ampcode.com"
+  git config --local user.name "Amp"
+  echo "Local git configured"
+else
+  echo "Not inside a git repository – skipping local git configuration"
+fi
 echo ""
 
-for i in {1..5}; do
-  echo "Attempt $i/5 to commit and push local AUR changes"
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  for i in {1..5}; do
+    echo "Attempt $i/5 to commit and push local AUR changes"
 
-  # Pull latest changes
-  echo "Pulling latest changes..."
-  if git pull origin main; then
-    echo "Successfully pulled latest changes"
-  else
-    echo "Pull failed, continuing anyway..."
-  fi
+    # Pull latest changes
+    echo "Pulling latest changes..."
+    if git pull origin main; then
+      echo "Successfully pulled latest changes"
+    else
+      echo "Pull failed, continuing anyway..."
+    fi
 
-  # Add and commit changes
-  echo "Adding changes to git..."
-  echo "Files in aur/ampcode/:"
-  ls -la aur/ampcode/
-  git add aur/ampcode/
-  echo "Git status after add:"
-  git status
-  
-  if git commit -m "Update AUR package to $VERSION with checksums"; then
-    echo "Changes committed successfully"
-    # Try to push
-    echo "Pushing changes..."
-    if git push; then
-      echo "Successfully pushed local changes on attempt $i"
+    # Add and commit changes
+    echo "Adding changes to git..."
+    echo "Files in aur/ampcode/:"
+    ls -la aur/ampcode/
+    git add aur/ampcode/
+    echo "Git status after add:"
+    git status
+    
+    if git commit -m "Update AUR package to $VERSION with checksums"; then
+      echo "Changes committed successfully"
+      # Try to push
+      echo "Pushing changes..."
+      if git push; then
+        echo "Successfully pushed local changes on attempt $i"
+        echo ""
+        echo "==============================================="
+        echo "AUR BUILD COMPLETED SUCCESSFULLY"
+        echo "==============================================="
+        exit 0
+      else
+        PUSH_EXIT_CODE=$?
+        echo "Push failed on attempt $i (exit code: $PUSH_EXIT_CODE), retrying..."
+        sleep $((i * 2))
+      fi
+    else
+      echo "No changes to commit on attempt $i"
       echo ""
       echo "==============================================="
-      echo "AUR BUILD COMPLETED SUCCESSFULLY"
+      echo "AUR BUILD COMPLETED (NO CHANGES)"
       echo "==============================================="
       exit 0
-    else
-      PUSH_EXIT_CODE=$?
-      echo "Push failed on attempt $i (exit code: $PUSH_EXIT_CODE), retrying..."
-      sleep $((i * 2))
     fi
-  else
-    echo "No changes to commit on attempt $i"
-    echo ""
-    echo "==============================================="
-    echo "AUR BUILD COMPLETED (NO CHANGES)"
-    echo "==============================================="
-    exit 0
-  fi
-done
+  done
 
-echo "ERROR: Failed to push local changes after 5 attempts"
-exit 1
+  echo "ERROR: Failed to push local changes after 5 attempts"
+  exit 1
+else
+  echo "Not inside a git repository – skipping local workspace update"
+  echo ""
+  echo "==============================================="
+  echo "AUR BUILD COMPLETED SUCCESSFULLY"
+  echo "==============================================="
+  exit 0
+fi

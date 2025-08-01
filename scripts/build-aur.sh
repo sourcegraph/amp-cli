@@ -10,9 +10,15 @@ echo "Building AUR package for version $VERSION"
 pacman -Syu --noconfirm git openssh github-cli
 
 # Setup SSH for AUR
+if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
+  echo "AUR_SSH_PRIVATE_KEY environment variable not set"
+  exit 1
+fi
+
 mkdir -p ~/.ssh
 echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
 chmod 600 ~/.ssh/aur
+chmod 700 ~/.ssh
 ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
 # Create SSH config for AUR

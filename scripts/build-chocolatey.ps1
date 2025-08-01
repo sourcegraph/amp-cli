@@ -64,7 +64,15 @@ if ($NupkgFile) {
 # Upload package to GitHub Release
 $VersionTag = if ($Version.StartsWith('v')) { $Version } else { "v$Version" }
 Write-Host "Uploading package to release $VersionTag"
-gh release upload $VersionTag amp.*.nupkg --clobber --repo sourcegraph/amp-cli
+$PackageFile = Get-ChildItem -Name "*.nupkg" | Select-Object -First 1
+if ($PackageFile) {
+    Write-Host "Found package file: $PackageFile"
+    gh release upload $VersionTag $PackageFile --clobber --repo sourcegraph/amp-cli
+} else {
+    Write-Host "No .nupkg file found to upload"
+    Get-ChildItem -Name "*.nupkg"
+    exit 1
+}
 
 # Publish to Chocolatey if token is available
 if ($env:CHOCO_PUBLISH_TOKEN) {

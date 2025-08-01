@@ -9,18 +9,22 @@ echo "Building Nix package for version $VERSION"
 # Install Nix if not already available
 if ! command -v nix &> /dev/null; then
   echo "Installing Nix..."
-  curl -L https://nixos.org/nix/install | sh -s -- --daemon
+  # Use single-user install for CI environment
+  curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
   # Source the nix environment
-  if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
-    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-  elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
+  if [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
     . ~/.nix-profile/etc/profile.d/nix.sh
   fi
   # Verify nix is available
   if ! command -v nix &> /dev/null; then
-    echo "Failed to install Nix"
-    exit 1
+    echo "Failed to install Nix, trying alternative sourcing..."
+    export PATH="$HOME/.nix-profile/bin:$PATH"
+    if ! command -v nix &> /dev/null; then
+      echo "Nix installation failed completely"
+      exit 1
+    fi
   fi
+  echo "Nix installed successfully"
 fi
 
 # Download binaries and calculate checksums
@@ -56,6 +60,8 @@ rm -f amp-linux-x64 amp-linux-arm64 amp-darwin-x64 amp-darwin-arm64
 
 # Test Nix flake
 echo "Testing Nix flake..."
+# Enable experimental features that flakes require
+export NIX_CONFIG="experimental-features = nix-command flakes"
 nix flake check
 nix build .#amp
 

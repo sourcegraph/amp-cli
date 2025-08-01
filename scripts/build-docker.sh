@@ -17,7 +17,12 @@ echo "Building Docker image for version $VERSION, platform $PLATFORM, arch $ARCH
 docker buildx create --use --name multiarch || docker buildx use multiarch
 
 # Login to GitHub Container Registry
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+echo "Logging into GitHub Container Registry..."
+if [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_ACTOR" ]; then
+  echo "Missing GITHUB_TOKEN or GITHUB_ACTOR environment variables"
+  exit 1
+fi
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
 # Build and push for the specified platform
 platform="$PLATFORM"

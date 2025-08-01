@@ -73,6 +73,109 @@ is_macos() {
     [ "$(uname -s)" = "Darwin" ]
 }
 
+# Output control flags
+VERBOSE=0
+QUIET=0
+
+say() {
+    if [ "$QUIET" -eq 0 ]; then
+        printf 'amp-install: %s\n' "$1"
+    fi
+}
+
+verbose() {
+    if [ "$VERBOSE" -eq 1 ]; then
+        printf 'amp-install (verbose): %s\n' "$1" >&2
+    fi
+}
+
+err() {
+    printf 'amp-install: %s\n' "$1" >&2
+    exit 1
+}
+
+run_cmd() {
+    # Check for dry-run in test environment
+    if [ "${AMP_DRY_RUN-}" ]; then
+        printf 'would run: %s\n' "$*" >&2
+        return 0
+    else
+        verbose "Running: $*"
+        "$@"
+    fi
+}
+
+# Migration function to handle existing Node.js-based amp installations
+migrate() {
+    verbose "Checking for existing amp installation..."
+    
+    if ! check_cmd amp; then
+        verbose "No existing amp found on PATH"
+        return 0
+    fi
+    
+    say "Found existing amp installation"
+    
+    # Check which package manager installed amp
+    local _package_manager=""
+    local _confirm_msg=""
+    local _uninstall_cmd=""
+    
+    # Check npm global packages
+    if has_npm && npm list -g amp 2>/dev/null | grep -q "amp@"; then
+        _package_manager="npm"
+        _confirm_msg="Found amp installed via npm. Remove it?"
+        _uninstall_cmd="npm uninstall -g amp"
+    # Check pnpm global packages  
+    elif has_pnpm && pnpm list -g amp 2>/dev/null | grep -q "amp"; then
+        _package_manager="pnpm"
+        _confirm_msg="Found amp installed via pnpm. Remove it?"
+        _uninstall_cmd="pnpm remove -g amp"
+    # Check yarn global packages
+    elif has_yarn && yarn global list 2>/dev/null | grep -q "amp@"; then
+        _package_manager="yarn"
+        _confirm_msg="Found amp installed via yarn. Remove it?"
+        _uninstall_cmd="yarn global remove amp"
+    else
+        verbose "amp found but not installed via npm/pnpm/yarn, skipping migration"
+        return 0
+    fi
+    
+    verbose "Detected amp installed via $_package_manager"
+    
+    # Check for --no-confirm flag or environment variable
+    local _no_confirm=""
+    if [ "${AMP_NO_CONFIRM-}" ]; then
+        _no_confirm="yes"
+    fi
+    
+    # Ask for confirmation unless --no-confirm is set
+    if [ "$_no_confirm" != "yes" ]; then
+        printf "%s [y/N]: " "$_confirm_msg"
+        read -r _response
+        case "$_response" in
+        [yY] | [yY][eE][sS])
+            ;;
+        *)
+            say "Skipping removal of existing amp installation"
+            return 0
+            ;;
+        esac
+    fi
+    
+    say "Removing existing amp installation via $_package_manager..."
+    run_cmd $_uninstall_cmd
+    
+    # Verify removal (skip verification in dry-run mode)
+    if [ "${AMP_DRY_RUN-}" ]; then
+        say "Would remove existing amp installation"
+    elif check_cmd amp; then
+        err "Failed to remove existing amp installation"
+    else
+        say "Successfully removed existing amp installation"
+    fi
+}
+
 get_architecture() {
     local _ostype _cputype _arch
     _ostype="$(uname -s)"
@@ -389,4 +492,194 @@ teardown() {
     [[ "$output" == *"Package Managers:"* ]]
     [[ "$output" == *"Required Commands:"* ]]
     [[ "$output" == *"Environment Variables:"* ]]
+}
+
+# Test migrate function
+@test "migrate returns early when amp is not on PATH" {
+    # Mock check_cmd to simulate amp not being found
+    check_cmd() {
+        [ "$1" != "amp" ]
+    }
+    
+    run migrate
+    [ "$status" -eq 0 ]
+}
+
+@test "migrate detects npm-installed amp" {
+    # Skip if npm is not available
+    if ! has_npm; then
+        skip "npm not available"
+    fi
+    
+    # Mock functions to simulate npm-installed amp
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    npm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            echo "amp@1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    export AMP_NO_CONFIRM=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Found existing amp installation"* ]]
+    [[ "$output" == *"would run: npm uninstall -g amp"* ]]
+}
+
+@test "migrate detects pnpm-installed amp" {
+    # Skip if pnpm is not available
+    if ! has_pnpm; then
+        skip "pnpm not available"
+    fi
+    
+    # Mock functions to simulate pnpm-installed amp
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    pnpm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            echo "amp 1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    export AMP_NO_CONFIRM=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Found existing amp installation"* ]]
+    [[ "$output" == *"would run: pnpm remove -g amp"* ]]
+}
+
+@test "migrate detects yarn-installed amp" {
+    # Skip if yarn is not available
+    if ! has_yarn; then
+        skip "yarn not available"
+    fi
+    
+    # Mock functions to simulate yarn-installed amp
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    yarn() {
+        if [ "$1" = "global" ] && [ "$2" = "list" ]; then
+            echo "amp@1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    export AMP_NO_CONFIRM=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Found existing amp installation"* ]]
+    [[ "$output" == *"would run: yarn global remove amp"* ]]
+}
+
+@test "migrate skips non-nodejs amp installations" {
+    # Mock functions to simulate amp installed via other means
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    # Mock package managers to return no amp packages
+    npm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            return 1
+        fi
+    }
+    
+    pnpm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            return 1
+        fi
+    }
+    
+    yarn() {
+        if [ "$1" = "global" ] && [ "$2" = "list" ]; then
+            echo "other-package@1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Found existing amp installation"* ]]
+}
+
+@test "migrate respects AMP_NO_CONFIRM environment variable" {
+    # Skip if npm is not available
+    if ! has_npm; then
+        skip "npm not available"
+    fi
+    
+    # Mock functions
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    npm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            echo "amp@1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    export AMP_NO_CONFIRM=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    # Should not prompt for confirmation
+    [[ "$output" != *"Remove it? [y/N]:"* ]]
+}
+
+@test "migrate runs in dry-run mode correctly" {
+    # Skip if npm is not available
+    if ! has_npm; then
+        skip "npm not available"
+    fi
+    
+    # Mock functions
+    check_cmd() {
+        case "$1" in
+            amp) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    npm() {
+        if [ "$1" = "list" ] && [ "$2" = "-g" ] && [ "$3" = "amp" ]; then
+            echo "amp@1.0.0"
+        fi
+    }
+    
+    export AMP_DRY_RUN=1
+    export AMP_NO_CONFIRM=1
+    
+    run migrate
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"would run: npm uninstall -g amp"* ]]
 }

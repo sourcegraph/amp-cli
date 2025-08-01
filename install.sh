@@ -338,6 +338,8 @@ main() {
     need_cmd rmdir
     need_cmd curl
 
+    migrate
+
     get_architecture || return 1
     local _arch="$RETVAL"
     assert_nz "$_arch" "arch"
@@ -629,6 +631,85 @@ is_wsl() {
 
 is_macos() {
     [ "$(uname -s)" = "Darwin" ]
+}
+
+# Migration function to handle existing Node.js-based Amp installations
+migrate() {
+    verbose "Checking for existing Amp Node.js installation..."
+
+    if ! check_cmd amp; then
+        verbose "No existing amp found on PATH"
+        return 0
+    fi
+
+    say "Found existing Amp Node.js installation"
+
+    # Check which package manager installed amp
+    local _package_manager=""
+    local _confirm_msg=""
+    local _uninstall_cmd=""
+
+    # Check npm global packages
+    local _npm_package_name="@sourcegraph/amp"
+    if has_npm && npm list -g amp 2>/dev/null | grep -q ${_npm_package_name}; then
+        _package_manager="npm"
+        _confirm_msg="Found amp installed via npm. Remove it?"
+        _uninstall_cmd="npm uninstall -g ${_npm_package_name}"
+    # Check pnpm global packages
+    elif has_pnpm && pnpm list -g amp 2>/dev/null | grep -q "${_npm_package_name}"; then
+        _package_manager="pnpm"
+        _confirm_msg="Found amp installed via pnpm. Remove it?"
+        _uninstall_cmd="pnpm remove -g ${_npm_package_name}"
+    # Check yarn global packages
+    elif has_yarn && yarn global list 2>/dev/null | grep -q "${_npm_package_name}@"; then
+        _package_manager="yarn"
+        _confirm_msg="Found amp installed via yarn. Remove it?"
+        _uninstall_cmd="yarn global remove ${_npm_package_name}"
+    else
+        verbose "amp found but not installed via npm/pnpm/yarn, skipping migration"
+        return 0
+    fi
+
+    verbose "Detected amp installed via $_package_manager"
+
+    # Check for --no-confirm flag or environment variable
+    local _no_confirm=""
+    for arg in $SCRIPT_ARGS; do
+        if [ "$arg" = "--no-confirm" ]; then
+            _no_confirm="yes"
+            break
+        fi
+    done
+
+    if [ "${AMP_NO_CONFIRM-}" ]; then
+        _no_confirm="yes"
+    fi
+
+    # Ask for confirmation unless --no-confirm is set
+    if [ "$_no_confirm" != "yes" ]; then
+        say "$_confirm_msg [y/N]"
+        read -r _response
+        case "$_response" in
+        [yY] | [yY][eE][sS])
+            ;;
+        *)
+            say "Skipping removal of existing amp installation"
+            return 0
+            ;;
+        esac
+    fi
+
+    say "Removing existing amp installation via $_package_manager..."
+    run_cmd $_uninstall_cmd
+
+    # Verify removal (skip verification in dry-run mode)
+    if [ "${AMP_DRY_RUN-}" ]; then
+        say "Would remove existing amp installation"
+    elif check_cmd amp; then
+        err "Failed to remove existing amp installation"
+    else
+        say "Successfully removed existing amp installation"
+    fi
 }
 
 main "$@" || exit 1

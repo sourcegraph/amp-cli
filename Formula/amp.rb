@@ -3,7 +3,7 @@
 # Amp CLI - An agentic coding tool, in research preview from Sourcegraph
 class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
-  homepage 'https://github.com/sourcegraph/amp-cli'
+  homepage 'https://ampcode.com'
   url 'https://packages.ampcode.com/binaries/v0.0.1754035600/amp-darwin-arm64'
   sha256 'c98dc23b96f8abfd10a9c30e91cf4e2128ed00f4f1419f80109598b873f17e31'
   version '0.0.1754035600'

@@ -20,6 +20,9 @@ concurrency:
 jobs:
   update-chocolatey:
     runs-on: windows-latest
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -28,7 +31,7 @@ jobs:
         shell: bash
         run: |
           # Install GPG in Windows Subsystem for Linux (WSL) Ubuntu
-          wsl --install --no-distribution
+          wsl --install --no-launch
           wsl --set-default-version 2
           wsl --install Ubuntu --no-launch
           wsl -d Ubuntu -e bash -c "apt-get update && apt-get install -y gnupg"

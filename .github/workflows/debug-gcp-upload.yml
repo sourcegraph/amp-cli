@@ -30,15 +30,15 @@ jobs:
           echo "Ref: ${{ github.ref }}" >> debug-test.txt
           cat debug-test.txt
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
       - name: gcloud auth
         uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
         with:
           workload_identity_provider: >-
             projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
-
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
 
       - name: Test GCP authentication
         run: |
@@ -50,7 +50,7 @@ jobs:
         run: |
           echo "Uploading test file to packages.ampcode.com bucket..."
           # Upload the test file directly (service account already authenticated via workload identity)
-          gcloud storage cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"
+          gcloud storage cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt" --project=amp-prod-0
           echo "Upload completed successfully!"
 
       - name: Verify upload

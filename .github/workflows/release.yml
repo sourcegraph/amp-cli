@@ -105,10 +105,28 @@ jobs:
             fi
           done
 
+          # Upload install.sh to root
+          echo "Checking for install.sh..."
+          if [ -f "${GITHUB_WORKSPACE}/install.sh" ]; then
+            echo "Uploading install.sh"
+            gcloud storage cp "${GITHUB_WORKSPACE}/install.sh" "gs://packages.ampcode.com/" --project=amp-prod-0
+          else
+            echo "install.sh not found at expected path"
+            exit 1
+          fi
+
+          # Upload install.ps1 to root
+          echo "Checking for install.ps1..."
+          if [ -f "${GITHUB_WORKSPACE}/install.ps1" ]; then
+            echo "Uploading install.ps1"
+            gcloud storage cp "${GITHUB_WORKSPACE}/install.ps1" "gs://packages.ampcode.com/" --project=amp-prod-0
+          else
+            echo "install.ps1 not found at expected path"
+            exit 1
+          fi
+
           # Upload index.html to root
           echo "Checking for index.html..."
-          ls -la "${GITHUB_WORKSPACE}/"
-          ls -la "${GITHUB_WORKSPACE}/repository/" || echo "repository directory not found"
           if [ -f "${GITHUB_WORKSPACE}/repository/index.html" ]; then
             echo "Uploading index.html"
             gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0

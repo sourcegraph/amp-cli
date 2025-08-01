@@ -1,12 +1,12 @@
 # Maintainer: Sourcegraph <support@sourcegraph.com>
 
-pkgname=amp-bin
+pkgname=amp
 pkgver=REPLACE_WITH_VERSION
 pkgrel=1
-pkgdesc="AI-powered coding assistant CLI tool (binary)"
+pkgdesc="An agentic coding tool, in research preview from Sourcegraph"
 arch=('x86_64' 'aarch64')
-url="https://github.com/sourcegraph/amp-cli"
-license=('MIT')
+url="https://ampcode.com"
+license=('custom:proprietary')
 depends=('ripgrep')
 provides=('amp')
 conflicts=('amp')
@@ -23,15 +23,5 @@ package() {
         install -Dm755 "${srcdir}/${pkgname}-${pkgver}-x86_64" "${pkgdir}/usr/bin/amp"
     elif [[ "$CARCH" == "aarch64" ]]; then
         install -Dm755 "${srcdir}/${pkgname}-${pkgver}-aarch64" "${pkgdir}/usr/bin/amp"
-    fi
-
-    # Install license if available
-    if [[ -f "${srcdir}/LICENSE" ]]; then
-        install -Dm644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-    fi
-
-    # Install documentation if available
-    if [[ -f "${srcdir}/README.md" ]]; then
-        install -Dm644 "${srcdir}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
     fi
 }

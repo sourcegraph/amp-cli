@@ -93,8 +93,8 @@ done
 cd ..
 
 # Copy updated files back to our repository
-cp aur-repo/PKGBUILD aur/amp-bin/PKGBUILD
-cp aur-repo/.SRCINFO aur/amp-bin/.SRCINFO
+cp aur-repo/PKGBUILD aur/amp/PKGBUILD
+cp aur-repo/.SRCINFO aur/amp/.SRCINFO
 
 # Update local repository with retry logic
 git config --local user.email "amp@ampcode.com"

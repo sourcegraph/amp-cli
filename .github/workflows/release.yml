@@ -147,7 +147,7 @@ jobs:
           DEB_GPG_PUBLIC_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PUBLIC_KEY || '' }}
           DEB_GPG_PASSWORD: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PASSWORD || '' }}
           DEB_GPG_KEY_ID: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_KEY_ID || '' }}
-          AUR_SSH_PRIVATE_KEY: ${{ matrix.package == 'aur' && secrets.AUR_SSH_PRIVATE_KEY || '' }}
+          AUR_SSH_PRIVATE_KEY: ${{ matrix.package == 'aur' && secrets.ARCH_AUR_PUBLISH_PRIVATE_KEY || '' }}
 
       - name: Upload artifacts for repository build
         if: matrix.package == 'debian' || matrix.package == 'rpm'

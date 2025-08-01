@@ -843,17 +843,17 @@ migrate() {
     local _npm_package_name="@sourcegraph/amp"
     if has_npm && npm list -g amp 2>/dev/null | grep -q ${_npm_package_name}; then
         _package_manager="npm"
-        _confirm_msg="Found amp installed via npm. Remove it?"
+        _confirm_msg="Found Amp installed via npm. Remove it?"
         _uninstall_cmd="npm uninstall -g ${_npm_package_name}"
     # Check pnpm global packages
     elif has_pnpm && pnpm list -g amp 2>/dev/null | grep -q "${_npm_package_name}"; then
         _package_manager="pnpm"
-        _confirm_msg="Found amp installed via pnpm. Remove it?"
+        _confirm_msg="Found Amp installed via pnpm. Remove it?"
         _uninstall_cmd="pnpm remove -g ${_npm_package_name}"
     # Check yarn global packages
     elif has_yarn && yarn global list 2>/dev/null | grep -q "${_npm_package_name}@"; then
         _package_manager="yarn"
-        _confirm_msg="Found amp installed via yarn. Remove it?"
+        _confirm_msg="Found Amp installed via yarn. Remove it?"
         _uninstall_cmd="yarn global remove ${_npm_package_name}"
     else
         verbose "amp found but not installed via npm/pnpm/yarn, skipping migration"

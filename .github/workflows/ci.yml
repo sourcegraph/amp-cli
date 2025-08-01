@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@8887e596b4ee1134dae06b98d573bd674693f47c # v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Setup devenv
+        uses: cachix/devenv-action@ad4000265227aea85a719bda3fb9613528e7595b # v76
+        with:
+          devenv-root: .
+
+      - name: Run tests
+        run: devenv shell test-install-script
+
+      - name: Validate packages
+        run: devenv shell validate-all-packages
+
+      - name: Run pre-commit hooks
+        run: devenv shell pre-commit run --all-files

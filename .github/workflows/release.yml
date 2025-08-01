@@ -86,7 +86,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
 
       - name: Download and upload binaries to GCS
         run: |
@@ -160,7 +160,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
 
       - name: Build and upload manifest
         run: |
@@ -330,7 +330,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
 
       - name: Build repositories
         run: |
@@ -366,7 +366,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
 
       - name: Download and upload deb/rpm binaries to GCS
         run: |
@@ -409,7 +409,7 @@ jobs:
           service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
 
       - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
 
       - name: Set content types and cache headers
         run: |

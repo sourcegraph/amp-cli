@@ -1,7 +1,7 @@
 # Maintainer: Sourcegraph <amp-devs@sourcegraph.com>
 
-pkgbase=ampcode-com
-pkgname=ampcode-com
+pkgbase=ampcode
+pkgname=ampcode
 pkgver=REPLACE_WITH_VERSION
 pkgrel=1
 pkgdesc="An agentic coding tool, in research preview from Sourcegraph"
@@ -10,7 +10,7 @@ url="https://ampcode.com"
 license=('custom:proprietary')
 depends=('ripgrep')
 provides=('amp')
-replaces=('sourcegraph-amp' 'ampcode-com')
+replaces=('sourcegraph-amp' 'ampcode')
 conflicts=('amp')
 options=('!strip')
 

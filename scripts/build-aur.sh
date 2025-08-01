@@ -5,6 +5,9 @@ VERSION="$1"
 VERSION="${VERSION#v}"
 
 echo "Building AUR package for version $VERSION"
+echo "Current working directory: $(pwd)"
+echo "Directory contents:"
+ls -la
 
 # Install required packages in Arch container
 pacman -Syu --noconfirm git openssh github-cli
@@ -44,10 +47,16 @@ echo "ARM64 SHA: $arm64_sha"
 rm amp-linux-*
 
 # Copy template to PKGBUILD and update with version and checksums
+echo "Checking for PKGBUILD template..."
+ls -la aur/ampcode/
+echo "Copying PKGBUILD template..."
 cp aur/ampcode/PKGBUILD.template aur/ampcode/PKGBUILD
+echo "Updating PKGBUILD with version and checksums..."
 sed -i "s/REPLACE_WITH_VERSION/$VERSION/g" aur/ampcode/PKGBUILD
 sed -i "s/REPLACE_WITH_LINUX_AMD64_SHA256/$amd64_sha/g" aur/ampcode/PKGBUILD
 sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$arm64_sha/g" aur/ampcode/PKGBUILD
+echo "Updated PKGBUILD contents:"
+cat aur/ampcode/PKGBUILD
 
 # Clone AUR repository
 git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo
@@ -93,8 +102,9 @@ done
 cd ..
 
 # Copy updated files back to our repository
-cp aur-repo/PKGBUILD aur/amp/PKGBUILD
-cp aur-repo/.SRCINFO aur/amp/.SRCINFO
+echo "Copying updated files back to our repository..."
+cp aur-repo/PKGBUILD aur/ampcode/PKGBUILD
+cp aur-repo/.SRCINFO aur/ampcode/.SRCINFO
 
 # Update local repository with retry logic
 git config --local user.email "amp@ampcode.com"
@@ -104,12 +114,19 @@ for i in {1..5}; do
   echo "Attempt $i/5 to commit and push local AUR changes"
 
   # Pull latest changes
+  echo "Pulling latest changes..."
   git pull origin main || true
 
   # Add and commit changes
+  echo "Adding changes to git..."
+  echo "Files in aur/ampcode/:"
+  ls -la aur/ampcode/
   git add aur/ampcode/
+  echo "Git status after add:"
+  git status
   if git commit -m "Update AUR package to $VERSION with checksums"; then
     # Try to push
+    echo "Pushing changes..."
     if git push; then
       echo "Successfully pushed local changes on attempt $i"
       exit 0

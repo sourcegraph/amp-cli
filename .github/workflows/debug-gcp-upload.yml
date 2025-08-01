@@ -49,15 +49,13 @@ jobs:
       - name: Upload test file to GCS
         run: |
           echo "Uploading test file to packages.ampcode.com bucket..."
-          # Set project context for bucket access
-          gcloud config set project amp-prod-0
-          gsutil cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"
+          # Try using gcloud storage instead of gsutil to avoid project context issues
+          gcloud storage cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"
           echo "Upload completed successfully!"
 
       - name: Verify upload
         run: |
           echo "Verifying upload..."
-          gcloud config set project amp-prod-0
-          gsutil ls "gs://packages.ampcode.com/debug/"
+          gcloud storage ls "gs://packages.ampcode.com/debug/"
           echo "File details:"
-          gsutil stat "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"
+          gcloud storage ls -L "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"

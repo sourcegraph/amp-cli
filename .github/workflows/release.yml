@@ -1,0 +1,282 @@
+---
+name: Release Orchestrator
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  RELEASE_VERSION: >-
+    ${{ github.event_name == 'workflow_dispatch'
+          && inputs.release_tag
+          || github.event.release.tag_name }}
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  gpg-sign-binaries:
+    runs-on: ubuntu-latest
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+
+
+      - name: Setup GPG
+        run: |
+          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+        env:
+          GPG_TTY: $(tty)
+
+      - name: Download and sign release binaries
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
+
+          # Download all binary assets
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          # Sign all downloaded binaries
+          cd binaries
+          for binary in amp-*; do
+            if [ -f "$binary" ]; then
+              echo "Signing binary: $binary"
+              gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
+                --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
+                --armor --detach-sign "$binary"
+            fi
+          done
+
+          # Upload signature files to the release
+          gh release upload "$version" *.asc --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-packages:
+    needs: gpg-sign-binaries
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Single arch packages
+          - package: aur
+            runner: ubuntu-latest
+            container: archlinux:base-devel
+            script: ./scripts/build-aur.sh
+          - package: nix
+            runner: ubuntu-latest
+            script: ./scripts/build-nix.sh
+          - package: homebrew
+            runner: macos-latest
+            script: ./scripts/build-homebrew.sh
+          - package: chocolatey
+            runner: windows-latest
+            script: ./scripts/build-chocolatey.ps1
+          # Multi-arch packages - Debian
+          - package: debian
+            runner: ubuntu-latest
+            arch: amd64
+            script: ./scripts/build-debian.sh
+          - package: debian
+            runner: ubuntu-latest
+            arch: arm64
+            script: ./scripts/build-debian.sh
+          # Multi-arch packages - RPM
+          - package: rpm
+            runner: ubuntu-latest
+            arch: x86_64
+            script: ./scripts/build-rpm.sh
+          - package: rpm
+            runner: ubuntu-latest
+            arch: aarch64
+            script: ./scripts/build-rpm.sh
+          # Multi-arch packages - Docker
+          - package: docker
+            runner: ubuntu-latest
+            platform: linux/amd64
+            arch: x64
+            script: ./scripts/build-docker.sh
+          - package: docker
+            runner: ubuntu-latest
+            platform: linux/arm64
+            arch: arm64
+            script: ./scripts/build-docker.sh
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }} (Windows)
+        if: contains(matrix.runner, 'windows')
+        run: |
+          & ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCO_PUBLISH_TOKEN: ${{ secrets.CHOCO_PUBLISH_TOKEN }}
+
+      - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }} (Unix)
+        if: ${{ !contains(matrix.runner, 'windows') }}
+        run: |
+          chmod +x ${{ matrix.script }}
+          ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEB_GPG_PRIVATE_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PRIVATE_KEY || '' }}
+          DEB_GPG_PUBLIC_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PUBLIC_KEY || '' }}
+          DEB_GPG_PASSWORD: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PASSWORD || '' }}
+          DEB_GPG_KEY_ID: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_KEY_ID || '' }}
+          AUR_SSH_PRIVATE_KEY: ${{ matrix.package == 'aur' && secrets.AUR_SSH_PRIVATE_KEY || '' }}
+
+      - name: Upload artifacts for repository build
+        if: matrix.package == 'debian' || matrix.package == 'rpm'
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: ${{ matrix.package == 'debian' && format('amp-{0}.deb', matrix.arch) || format('amp-{0}.rpm', matrix.arch) }}
+          path: |
+            artifacts/*.deb
+            artifacts/*.deb.asc
+            artifacts/*.rpm
+            artifacts/*.rpm.asc
+
+
+  build-and-upload-repositories:
+    runs-on: ubuntu-latest
+    needs: [gpg-sign-binaries, build-packages]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'write' # needed for release upload
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Download package artifacts
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
+        with:
+          workflow: release.yml
+          name_is_regexp: true
+          name: amp-.*\.(deb|rpm)
+          path: artifacts/
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
+      - name: Build repositories
+        run: |
+          chmod +x ./scripts/build-repositories.sh
+          ./scripts/build-repositories.sh "${{ env.RELEASE_VERSION }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+
+  upload-binaries:
+    runs-on: ubuntu-latest
+    needs: [gpg-sign-binaries, build-packages]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.6
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
+
+      - name: Download and upload binaries to GCS
+        run: |
+          version="${{ env.RELEASE_VERSION }}"
+
+          # Download all binary assets and signatures
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          cd binaries
+
+          # Upload Windows binaries and signatures
+          for file in amp-*windows*; do
+            if [ -f "$file" ]; then
+              echo "Uploading Windows binary: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/windows/"
+            fi
+          done
+
+          for file in amp-*windows*.asc; do
+            if [ -f "$file" ]; then
+              echo "Uploading Windows signature: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/windows/"
+            fi
+          done
+
+          # Upload Linux binaries and signatures
+          for file in amp-*linux*; do
+            if [ -f "$file" ]; then
+              echo "Uploading Linux binary: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/linux/"
+            fi
+          done
+
+          for file in amp-*linux*.asc; do
+            if [ -f "$file" ]; then
+              echo "Uploading Linux signature: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/linux/"
+            fi
+          done
+
+          # Upload Darwin binaries and signatures
+          for file in amp-*darwin*; do
+            if [ -f "$file" ]; then
+              echo "Uploading Darwin binary: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/darwin/"
+            fi
+          done
+
+          for file in amp-*darwin*.asc; do
+            if [ -f "$file" ]; then
+              echo "Uploading Darwin signature: $file"
+              gsutil cp "$file" "gs://packages.ampcode.com/darwin/"
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

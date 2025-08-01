@@ -386,6 +386,7 @@ main() {
     need_cmd curl
 
     migrate
+    install_vscode_extension
 
     get_architecture || return 1
     local _arch="$RETVAL"
@@ -410,21 +411,13 @@ main() {
         fi
     fi
 
-    if [ "$QUIET" -eq 0 ]; then
-        if $_ansi_escapes_are_valid; then
-            printf "\33[1minfo:\33[0m downloading amp \33[4m%s\33[0m\n" "$_url" 1>&2
-        else
-            printf 'info: downloading amp (%s)\n' "$_url" 1>&2
-        fi
-    fi
-
-    verbose "Platform detected: $_arch"
-    verbose "Download URL: $_url"
-    verbose "Target file: $_file"
-
-    run_cmd mkdir -p "$_dir"
-    run_cmd curl -L -o "$_file" "$_url"
-    run_cmd chmod u+x "$_file"
+    # if [ "$QUIET" -eq 0 ]; then
+    #     if $_ansi_escapes_are_valid; then
+    #         printf "\33[1minfo:\33[0m downloading amp \33[4m%s\33[0m\n" "$_url" 1>&2
+    #     else
+    #         printf 'info: downloading amp (%s)\n' "$_url" 1>&2
+    #     fi
+    # fi
 
     if [ "$dry_run" = "no" ] && [ ! -x "$_file" ]; then
         printf '%s\n' "Cannot execute $_file (likely because of mounting /tmp as noexec)." 1>&2
@@ -719,29 +712,29 @@ install_vscode_extension() {
 
     # Install for VS Code
     if has_vscode; then
-        verbose "Installing Amp extension for VS Code..."
-        run_cmd code --install-extension "$_extension_id"
+        say "Installing Amp extension for VS Code..."
+        run_cmd code --install-extension "$_extension_id" --force
         _installed_count=$((_installed_count + 1))
     fi
 
     # Install for VS Code Insiders
     if has_vscode_insiders; then
-        verbose "Installing Amp extension for VS Code Insiders..."
-        run_cmd code-insiders --install-extension "$_extension_id"
+        say "Installing Amp extension for VS Code Insiders..."
+        run_cmd code-insiders --install-extension "$_extension_id" --force
         _installed_count=$((_installed_count + 1))
     fi
 
     # Install for Windsurf
     if has_windsurf; then
-        verbose "Installing Amp extension for Windsurf..."
-        run_cmd windsurf --install-extension "$_extension_id"
+        say "Installing Amp extension for Windsurf..."
+        run_cmd windsurf --install-extension "$_extension_id" --force
         _installed_count=$((_installed_count + 1))
     fi
 
     # Install for Cursor
     if has_cursor; then
-        verbose "Installing Amp extension for Cursor..."
-        run_cmd cursor --install-extension "$_extension_id"
+        say "Installing Amp extension for Cursor..."
+        run_cmd cursor --install-extension "$_extension_id" --force
         _installed_count=$((_installed_count + 1))
     fi
 

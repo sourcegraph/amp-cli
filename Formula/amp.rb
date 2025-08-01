@@ -4,27 +4,27 @@
 class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
   homepage 'https://github.com/sourcegraph/amp-cli'
-  url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754018651/amp-darwin-arm64'
-  sha256 '3f7a613bfcd164a366dadd59d86d9a44c6f7fd68e447200ea690a4840af8fa38'
-  version '0.0.1754018651'
+  url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754022453/amp-darwin-arm64'
+  sha256 '76168332b6cc793050bd71bf5357df6cc805819489ab617bbf1229cdeb198340'
+  version '0.0.1754022453'
 
   on_macos do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754018651/amp-darwin-arm64'
-      sha256 '3f7a613bfcd164a366dadd59d86d9a44c6f7fd68e447200ea690a4840af8fa38'
+      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754022453/amp-darwin-arm64'
+      sha256 '76168332b6cc793050bd71bf5357df6cc805819489ab617bbf1229cdeb198340'
     else
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754018651/amp-darwin-x64'
-      sha256 'd526ec1a8bc6827f9163f7bedfbcb85ea31d3a799ffe7e31eb9d2fe9e51e1bd5'
+      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754022453/amp-darwin-x64'
+      sha256 '7b700501c9dddb8a10dbad36a180576a6eb0fb63bdd94eabcc3537a2d3bd8151'
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754018651/amp-linux-arm64'
-      sha256 '95343e210c400ee287c92e71f93a0ab210849f0c3ab888ff7ce312d7cc112abf'
+      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754022453/amp-linux-arm64'
+      sha256 '213222afe829b05b0e1b6f16b5dd7ccafeb9a6ca2b32d43115f2eb4fb98ffd2b'
     else
-      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754018651/amp-linux-x64'
-      sha256 'db119c8f0953f27f4167256ea8fb829c1801ef5892486d16b2e85b70953420d4'
+      url 'https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754022453/amp-linux-x64'
+      sha256 'aabef5e6484aed7d2226f23160a3e08e98a0a9fe178f47c10ac25decde966f4e'
     end
   end
 

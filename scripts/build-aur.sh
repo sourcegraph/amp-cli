@@ -18,18 +18,20 @@ if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
   exit 1
 fi
 
-mkdir -p ~/.ssh
-echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+# SSH setup -------------------------------------------------------------
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+echo "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/aur
 chmod 600 ~/.ssh/aur
-chmod 700 ~/.ssh
-ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+# record current host key
+ssh-keyscan -t ed25519,rsa aur.archlinux.org >> ~/.ssh/known_hosts
 
-# Create SSH config for AUR
 cat > ~/.ssh/config <<EOF
 Host aur.archlinux.org
-  User aur
-  IdentityFile ~/.ssh/aur
-  StrictHostKeyChecking no
+  User                 aur
+  IdentityFile         ~/.ssh/aur
+  IdentitiesOnly       yes
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile   ~/.ssh/known_hosts
 EOF
 
 # Download release files to calculate checksums

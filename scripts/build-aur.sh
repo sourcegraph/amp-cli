@@ -10,7 +10,11 @@ echo "Directory contents:"
 ls -la
 
 # Install required packages in Arch container
-pacman -Syu --noconfirm git openssh github-cli
+pacman -Syu --noconfirm git openssh github-cli sudo
+
+# Create non-root user for makepkg (required by AUR)
+useradd -m -G wheel builder
+echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 # Setup SSH for AUR
 if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
@@ -94,8 +98,8 @@ cd aur-repo
 # Copy our updated PKGBUILD to the AUR repo
 cp ../aur/ampcode/PKGBUILD ./PKGBUILD
 
-# Generate new .SRCINFO
-makepkg --printsrcinfo > .SRCINFO
+# Generate new .SRCINFO as non-root user
+sudo -u builder makepkg --printsrcinfo > .SRCINFO
 
 # Configure git
 git config user.name "Amp"

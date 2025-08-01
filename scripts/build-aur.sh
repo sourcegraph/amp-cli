@@ -49,9 +49,17 @@ cat ~/.ssh/config
 echo "Testing SSH connection with verbose output..."
 ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org 2>&1 || echo "SSH test failed as expected"
 
+# Test SSH connection with our key specifically
+echo "Testing SSH with our specific key..."
+ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -vvv -T aur@aur.archlinux.org 2>&1 || echo "SSH key test failed - likely permission issue"
+
 # Set GIT_SSH_COMMAND to use our SSH key and config
 export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes"
 echo "GIT_SSH_COMMAND set to: $GIT_SSH_COMMAND"
+
+# Show public key for debugging
+echo "Public key fingerprint from private key:"
+ssh-keygen -y -f ~/.ssh/aur | ssh-keygen -lf - || echo "Could not extract public key"
 
 # Download release files to calculate checksums
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \

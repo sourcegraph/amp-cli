@@ -107,7 +107,7 @@ jobs:
 
           # Upload index.html to root
           echo "Uploading index.html"
-          gcloud storage cp ../repository/index.html "gs://packages.ampcode.com/" --project=amp-prod-0
+          gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

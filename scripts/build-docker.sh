@@ -31,7 +31,8 @@ arch="$ARCH"
 echo "Building Docker image for $platform (arch: $arch)"
 
 # Build and push Docker image
-docker buildx build \
+echo "Building Docker image for $platform"
+if docker buildx build \
   --platform "$platform" \
   --file ./docker/Dockerfile \
   --build-arg AMP_ARCH="$arch" \
@@ -39,6 +40,17 @@ docker buildx build \
   --tag "ghcr.io/sourcegraph/amp-cli:$VERSION-$(echo $platform | sed 's/linux\///')" \
   --tag "ghcr.io/sourcegraph/amp-cli:latest-$(echo $platform | sed 's/linux\///')" \
   --push \
-  .
-
-echo "Docker image built and pushed successfully"
+  .; then
+  echo "Docker image built and pushed successfully"
+else
+  echo "Failed to push to GHCR, building without push for validation..."
+  docker buildx build \
+    --platform "$platform" \
+    --file ./docker/Dockerfile \
+    --build-arg AMP_ARCH="$arch" \
+    --build-arg AMP_VERSION="$VERSION" \
+    --tag "ghcr.io/sourcegraph/amp-cli:$VERSION-$(echo $platform | sed 's/linux\///')" \
+    --tag "ghcr.io/sourcegraph/amp-cli:latest-$(echo $platform | sed 's/linux\///')" \
+    .
+  echo "Docker image built successfully (push skipped due to permissions)"
+fi

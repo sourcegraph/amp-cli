@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory=$true)]
-    [string]$Version
+    [string]$Version,
+    [string]$Arch = "",
+    [string]$Platform = ""
 )
 
 $Version = $Version -replace '^v', ''

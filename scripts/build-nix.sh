@@ -62,7 +62,15 @@ rm -f amp-linux-x64 amp-linux-arm64 amp-darwin-x64 amp-darwin-arm64
 echo "Testing Nix flake..."
 # Enable experimental features that flakes require
 export NIX_CONFIG="experimental-features = nix-command flakes"
-nix flake check
+
+# Use GitHub token to avoid rate limiting if available
+if [ -n "$GITHUB_TOKEN" ]; then
+  export NIX_CONFIG="$NIX_CONFIG access-tokens = github.com=$GITHUB_TOKEN"
+fi
+
+# Create a flake.lock file to avoid GitHub API calls during check
+nix flake lock --no-update-lock-file || true
+nix flake check --no-update-lock-file
 nix build .#amp
 
 # Configure git and commit changes

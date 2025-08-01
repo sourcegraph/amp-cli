@@ -70,6 +70,7 @@ jobs:
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
     permissions:
       contents: write  # needed for git push and release upload
+      packages: write  # needed for docker push to GHCR
     strategy:
       fail-fast: false
       matrix:

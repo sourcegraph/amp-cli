@@ -212,6 +212,50 @@ doctor() {
     else
         echo "  Chocolatey: ✗"
     fi
+
+    if has_vscode; then
+        echo "  VS Code: ✓ ($(code --version 2>/dev/null | head -1))"
+        if code --list-extensions 2>/dev/null | grep -q "sourcegraph.amp"; then
+            echo "    Amp extension: ✓"
+        else
+            echo "    Amp extension: ✗"
+        fi
+    else
+        echo "  VS Code: ✗"
+    fi
+
+    if has_vscode_insiders; then
+        echo "  VS Code Insiders: ✓ ($(code-insiders --version 2>/dev/null | head -1))"
+        if code-insiders --list-extensions 2>/dev/null | grep -q "sourcegraph.amp"; then
+            echo "    Amp extension: ✓"
+        else
+            echo "    Amp extension: ✗"
+        fi
+    else
+        echo "  VS Code Insiders: ✗"
+    fi
+
+    if has_windsurf; then
+        echo "  Windsurf: ✓ ($(windsurf --version 2>/dev/null | head -1))"
+        if windsurf --list-extensions 2>/dev/null | grep -q "sourcegraph.amp"; then
+            echo "    Amp extension: ✓"
+        else
+            echo "    Amp extension: ✗"
+        fi
+    else
+        echo "  Windsurf: ✗"
+    fi
+
+    if has_cursor; then
+        echo "  Cursor: ✓ ($(cursor --version 2>/dev/null | head -1))"
+        if cursor --list-extensions 2>/dev/null | grep -q "sourcegraph.amp"; then
+            echo "    Amp extension: ✓"
+        else
+            echo "    Amp extension: ✗"
+        fi
+    else
+        echo "  Cursor: ✗"
+    fi
     echo ""
 
     # Required commands
@@ -649,6 +693,104 @@ has_npm() {
 
 has_choco() {
     check_cmd choco
+}
+
+has_vscode() {
+    check_cmd code
+}
+
+has_vscode_insiders() {
+    check_cmd code-insiders
+}
+
+has_windsurf() {
+    check_cmd windsurf
+}
+
+has_cursor() {
+    check_cmd cursor
+}
+
+install_vscode_extension() {
+    local _extension_id="sourcegraph.amp"
+    local _installed_count=0
+
+    say "Installing Amp extension for available editors..."
+
+    # Install for VS Code
+    if has_vscode; then
+        verbose "Installing Amp extension for VS Code..."
+        run_cmd code --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+
+    # Install for VS Code Insiders
+    if has_vscode_insiders; then
+        verbose "Installing Amp extension for VS Code Insiders..."
+        run_cmd code-insiders --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+
+    # Install for Windsurf
+    if has_windsurf; then
+        verbose "Installing Amp extension for Windsurf..."
+        run_cmd windsurf --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+
+    # Install for Cursor
+    if has_cursor; then
+        verbose "Installing Amp extension for Cursor..."
+        run_cmd cursor --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+
+    if [ "$_installed_count" -eq 0 ]; then
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+    else
+        say "Amp extension installed for $_installed_count editor(s)"
+    fi
+}
+
+update_vscode_extension() {
+    local _extension_id="sourcegraph.amp"
+    local _updated_count=0
+
+    say "Updating Amp extension for available editors..."
+
+    # Update for VS Code
+    if has_vscode; then
+        verbose "Updating Amp extension for VS Code..."
+        run_cmd code --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
+    # Update for VS Code Insiders
+    if has_vscode_insiders; then
+        verbose "Updating Amp extension for VS Code Insiders..."
+        run_cmd code-insiders --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
+    # Update for Windsurf
+    if has_windsurf; then
+        verbose "Updating Amp extension for Windsurf..."
+        run_cmd windsurf --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
+    # Update for Cursor
+    if has_cursor; then
+        verbose "Updating Amp extension for Cursor..."
+        run_cmd cursor --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
+    if [ "$_updated_count" -eq 0 ]; then
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+    else
+        say "Amp extension updated for $_updated_count editor(s)"
+    fi
 }
 
 # Operating system detection functions

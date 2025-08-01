@@ -98,6 +98,104 @@ update_nix_flake() {
     NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile upgrade github:sourcegraph/amp-cli
 }
 
+has_vscode() {
+    check_cmd code
+}
+
+has_vscode_insiders() {
+    check_cmd code-insiders
+}
+
+has_windsurf() {
+    check_cmd windsurf
+}
+
+has_cursor() {
+    check_cmd cursor
+}
+
+install_vscode_extension() {
+    local _extension_id="sourcegraph.amp"
+    local _installed_count=0
+    
+    say "Installing Amp extension for available editors..."
+    
+    # Install for VS Code
+    if has_vscode; then
+        verbose "Installing Amp extension for VS Code..."
+        run_cmd code --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+    
+    # Install for VS Code Insiders
+    if has_vscode_insiders; then
+        verbose "Installing Amp extension for VS Code Insiders..."
+        run_cmd code-insiders --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+    
+    # Install for Windsurf
+    if has_windsurf; then
+        verbose "Installing Amp extension for Windsurf..."
+        run_cmd windsurf --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+    
+    # Install for Cursor
+    if has_cursor; then
+        verbose "Installing Amp extension for Cursor..."
+        run_cmd cursor --install-extension "$_extension_id"
+        _installed_count=$((_installed_count + 1))
+    fi
+    
+    if [ "$_installed_count" -eq 0 ]; then
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+    else
+        say "Amp extension installed for $_installed_count editor(s)"
+    fi
+}
+
+update_vscode_extension() {
+    local _extension_id="sourcegraph.amp"
+    local _updated_count=0
+    
+    say "Updating Amp extension for available editors..."
+    
+    # Update for VS Code
+    if has_vscode; then
+        verbose "Updating Amp extension for VS Code..."
+        run_cmd code --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+    
+    # Update for VS Code Insiders
+    if has_vscode_insiders; then
+        verbose "Updating Amp extension for VS Code Insiders..."
+        run_cmd code-insiders --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+    
+    # Update for Windsurf
+    if has_windsurf; then
+        verbose "Updating Amp extension for Windsurf..."
+        run_cmd windsurf --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+    
+    # Update for Cursor
+    if has_cursor; then
+        verbose "Updating Amp extension for Cursor..."
+        run_cmd cursor --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+    
+    if [ "$_updated_count" -eq 0 ]; then
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+    else
+        say "Amp extension updated for $_updated_count editor(s)"
+    fi
+}
+
 is_archlinux() {
     [ -f /etc/arch-release ] || [ -f /etc/archlinux-release ]
 }
@@ -930,4 +1028,111 @@ teardown() {
     [[ "$output" == *"Updating Amp via Nix flake..."* ]]
     [[ "$output" == *"Using nix profile upgrade with experimental features and allowing unfree packages..."* ]]
     [[ "$output" == *"would run: nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile upgrade github:sourcegraph/amp-cli"* ]]
+}
+
+# Test editor detection functions
+@test "has_vscode detects VS Code when present" {
+    if command -v code >/dev/null 2>&1; then
+        run has_vscode
+        [ "$status" -eq 0 ]
+    else
+        skip "VS Code not installed"
+    fi
+}
+
+@test "has_vscode_insiders detects VS Code Insiders when present" {
+    if command -v code-insiders >/dev/null 2>&1; then
+        run has_vscode_insiders
+        [ "$status" -eq 0 ]
+    else
+        skip "VS Code Insiders not installed"
+    fi
+}
+
+@test "has_windsurf detects Windsurf when present" {
+    if command -v windsurf >/dev/null 2>&1; then
+        run has_windsurf
+        [ "$status" -eq 0 ]
+    else
+        skip "Windsurf not installed"
+    fi
+}
+
+@test "has_cursor detects Cursor when present" {
+    if command -v cursor >/dev/null 2>&1; then
+        run has_cursor
+        [ "$status" -eq 0 ]
+    else
+        skip "Cursor not installed"
+    fi
+}
+
+@test "install_vscode_extension handles no editors found" {
+    # Mock all editor commands to be unavailable
+    check_cmd() {
+        case "$1" in
+            code|code-insiders|windsurf|cursor) return 1 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    run install_vscode_extension
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"No supported editors found"* ]]
+}
+
+@test "install_vscode_extension installs for available editors" {
+    # Mock VS Code to be available
+    check_cmd() {
+        case "$1" in
+            code) return 0 ;;
+            code-insiders|windsurf|cursor) return 1 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_vscode_extension
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"Installing Amp extension for VS Code..."* ]]
+    [[ "$output" == *"would run: code --install-extension sourcegraph.amp"* ]]
+    [[ "$output" == *"Amp extension installed for 1 editor(s)"* ]]
+}
+
+@test "update_vscode_extension handles no editors found" {
+    # Mock all editor commands to be unavailable
+    check_cmd() {
+        case "$1" in
+            code|code-insiders|windsurf|cursor) return 1 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    run update_vscode_extension
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating Amp extension for available editors..."* ]]
+    [[ "$output" == *"No supported editors found"* ]]
+}
+
+@test "update_vscode_extension updates for available editors" {
+    # Mock VS Code to be available
+    check_cmd() {
+        case "$1" in
+            code) return 0 ;;
+            code-insiders|windsurf|cursor) return 1 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run update_vscode_extension
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating Amp extension for available editors..."* ]]
+    [[ "$output" == *"Updating Amp extension for VS Code..."* ]]
+    [[ "$output" == *"would run: code --install-extension sourcegraph.amp --force"* ]]
+    [[ "$output" == *"Amp extension updated for 1 editor(s)"* ]]
 }

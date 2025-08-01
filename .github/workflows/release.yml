@@ -47,10 +47,10 @@ jobs:
           # Download all binary assets
           gh release download "$version" --pattern "amp-*" --dir ./binaries
 
-          # Sign all downloaded binaries
+          # Sign all downloaded binaries (excluding .asc files)
           cd binaries
           for binary in amp-*; do
-            if [ -f "$binary" ]; then
+            if [ -f "$binary" ] && [[ "$binary" != *.asc ]]; then
               echo "Signing binary: $binary"
               gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
                 --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \

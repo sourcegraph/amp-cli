@@ -5,16 +5,16 @@ class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
   homepage 'https://github.com/sourcegraph/amp-cli'
   url '                https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754015686/amp-darwin-arm64'
-  sha256 ''
+  sha256 'fa1c72ec69a0daf37c0b1e25dcbb2a0b0d54130d9ece1cde3606775ea8038f25'
   version '0.0.1754015686'
 
   on_macos do
     if Hardware::CPU.arm?
       url '                https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754015686/amp-darwin-arm64'
-      sha256 ''
+      sha256 'fa1c72ec69a0daf37c0b1e25dcbb2a0b0d54130d9ece1cde3606775ea8038f25'
     else
       url '                https://github.com/sourcegraph/amp-cli/releases/download/v0.0.1754015686/amp-darwin-x64'
-      sha256 ''
+      sha256 '1a6820c140916057853196fd102a0495f84c02da6851301cb11261242c41ae8e'
     end
   end
 

@@ -63,93 +63,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  macos-sign-binaries:
-    runs-on: macos-latest
-    needs: gpg-sign-binaries
-    if: |
-      github.repository == 'sourcegraph/amp-cli' &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
-    env:
-      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-
-      - name: Import Developer ID certificate
-        if: ${{ env.MACOS_CERTIFICATE_P12 != '' }}
-        env:
-          CERT_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          CERT_PASS: ${{ secrets.MACOS_CERTIFICATE_PASSPHRASE }}
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-        run: |
-          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
-          security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASS" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-
-      - name: Download darwin binaries from release
-        run: |
-          gh release download "$RELEASE_VERSION" --pattern "amp-darwin-*" --dir binaries
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Codesign darwin binaries
-        if: ${{ env.MACOS_CERTIFICATE_P12 != '' }}
-        env:
-          CODESIGN_IDENTITY: ${{ secrets.MACOS_CERTIFICATE_IDENTITY }}
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-        run: |
-          for f in binaries/amp-darwin-*; do
-            if [ -f "$f" ]; then
-              echo "Signing: $f"
-              codesign --force --options runtime --timestamp \
-                       --sign "$CODESIGN_IDENTITY" "$f"
-              codesign --verify --strict "$f"
-              echo "Signed successfully: $f"
-            fi
-          done
-
-      - name: Notarize with Apple
-        if: ${{ env.MACOS_CERTIFICATE_P12 != '' && env.APPLE_NOTARIZE_KEY != '' }}
-        env:
-          AC_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          AC_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
-          AC_PRIVATE_KEY: ${{ secrets.APPLE_NOTARIZE_KEY }}
-          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          APPLE_NOTARIZE_KEY: ${{ secrets.APPLE_NOTARIZE_KEY }}
-        run: |
-          echo "$AC_PRIVATE_KEY" | base64 --decode > /tmp/key.p8
-          for f in binaries/amp-darwin-*; do
-            if [ -f "$f" ]; then
-              echo "Notarizing: $f"
-              xcrun notarytool submit "$f" \
-                    --key /tmp/key.p8 \
-                    --key-id "$AC_KEY_ID" \
-                    --issuer "$AC_ISSUER_ID" \
-                    --wait
-              xcrun stapler staple "$f"
-              echo "Notarized successfully: $f"
-            fi
-          done
-          rm -f /tmp/key.p8
-
-      - name: Re-upload signed binaries
-        run: |
-          gh release upload "$RELEASE_VERSION" binaries/amp-darwin-* --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Cleanup keychain
-        if: always()
-        run: |
-          security delete-keychain build.keychain || true
-          rm -f /tmp/cert.p12 || true
-
   upload-binaries-to-gcs:
     runs-on: ubuntu-latest
-    needs: [gpg-sign-binaries, macos-sign-binaries]
+    needs: gpg-sign-binaries
     if: |
       github.repository == 'sourcegraph/amp-cli' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
@@ -259,7 +175,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-packages:
-    needs: [gpg-sign-binaries, macos-sign-binaries, upload-binaries-to-gcs]
+    needs: [gpg-sign-binaries, upload-binaries-to-gcs]
     if: |
       github.repository == 'sourcegraph/amp-cli' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
@@ -327,7 +243,7 @@ jobs:
           AUR_SSH_PRIVATE_KEY: ${{ matrix.package == 'aur' && secrets.ARCH_AUR_PUBLISH_PRIVATE_KEY || '' }}
 
   build-deb-rpm-packages:
-    needs: [gpg-sign-binaries, macos-sign-binaries, upload-binaries-to-gcs]
+    needs: [gpg-sign-binaries, upload-binaries-to-gcs]
     if: |
       github.repository == 'sourcegraph/amp-cli' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
@@ -502,10 +418,6 @@ jobs:
             -h "Cache-Control:public, max-age=300" \
             gs://packages.ampcode.com/index.html || true
 
-          gsutil -m setmeta -h "Content-Type:text/html" \
-            -h "Cache-Control:public, max-age=300" \
-            gs://packages.ampcode.com/manifest.json || true
-
           gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
             -h "Cache-Control:public, max-age=86400" \
             "gs://packages.ampcode.com/gpg/*.asc" || true
@@ -515,6 +427,3 @@ jobs:
 
           gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
             "gs://packages.ampcode.com/rpm/**" || true
-
-          gsutil -m setmeta -h "Cache-Control:public, max-age=86400" \
-            "gs://packages.ampcode.com/binaries/**" || true

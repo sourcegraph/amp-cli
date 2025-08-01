@@ -29,13 +29,13 @@ find artifacts -name "*.rpm" -exec cp {} rpms/ \;
 
 # Build Debian repository
 echo "Building Debian repository..."
-chmod +x ./repository/scripts/build-debian-repo.sh
-./repository/scripts/build-debian-repo.sh debs repository/debian
+chmod +x ./scripts/build-debian-repo.sh
+./scripts/build-debian-repo.sh debs repository/debian
 
 # Build RPM repository
 echo "Building RPM repository..."
-chmod +x ./repository/scripts/build-rpm-repo.sh
-./repository/scripts/build-rpm-repo.sh rpms repository/rpm
+chmod +x ./scripts/build-rpm-repo.sh
+./scripts/build-rpm-repo.sh rpms repository/rpm
 
 # Export GPG public key
 if [ -n "$GPG_KEY_ID" ]; then

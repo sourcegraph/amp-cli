@@ -1,0 +1,21 @@
+Source: amp
+Section: utils
+Priority: optional
+Maintainer: Sourcegraph <support@sourcegraph.com>
+Build-Depends: debhelper (>= 10)
+Standards-Version: 4.1.2
+Homepage: https://github.com/sourcegraph/amp-cli
+
+Package: amp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ripgrep
+Description: AI-powered coding assistant CLI tool
+ Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
+ It provides intelligent code suggestions, error detection, and automated refactoring capabilities.
+ .
+ Features:
+  - AI-powered code suggestions
+  - Error detection and fixing
+  - Automated refactoring
+  - Cross-platform support
+  - Easy command-line interface

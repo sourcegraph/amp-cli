@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>amp</id>
+    <version>1.0.0</version>
+    <packageSourceUrl>https://github.com/sourcegraph/amp-cli/tree/main/chocolatey</packageSourceUrl>
+    <owners>Sourcegraph</owners>
+    <title>Amp CLI</title>
+    <authors>Sourcegraph</authors>
+    <projectUrl>https://ampcode.com</projectUrl>
+    <iconUrl>https://avatars.githubusercontent.com/u/220109460?v=4</iconUrl>
+    <copyright>2025 Sourcegraph</copyright>
+    <licenseUrl>https://ampcode.com</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/sourcegraph/amp-cli</projectSourceUrl>
+    <docsUrl>https://ampode.com/manual</docsUrl>
+    <bugTrackerUrl>https://ampode.com/manual</bugTrackerUrl>
+    <tags>amp ai cli coding development assistant productivity anthropic sourcegraph</tags>
+    <dependencies>
+      <dependency id="ripgrep" version="14.1.0" />
+    </dependencies>
+    <summary>An agentic coding tool, in research preview from Sourcegraph</summary>
+    <description><![CDATA[Amp is an agentic coding tool engineered to maximize what’s possible with today’s frontier models—autonomous reasoning, comprehensive code editing, and complex task execution.]]></description>
+    <releaseNotes>https://github.com/sourcegraph/amp-cli/releases/tag/v1.0.0</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

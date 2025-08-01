@@ -96,6 +96,10 @@ cat aur/ampcode/PKGBUILD
 
 # Clone AUR repository
 git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo
+
+# Change ownership of the cloned repo to builder user
+chown -R builder:builder aur-repo
+
 cd aur-repo
 
 # Copy our updated PKGBUILD to the AUR repo

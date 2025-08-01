@@ -42,6 +42,16 @@ echo "Builder user info:"
 id builder
 echo ""
 
+# Configure git before any git operations
+echo "Configuring git globally..."
+git config --global user.name "Amp"
+git config --global user.email "amp@ampcode.com"
+git config --global init.defaultBranch main
+echo "Git configured successfully"
+echo "Git configuration:"
+git config --list --global
+echo ""
+
 # Change ownership of workspace to builder user
 echo "Changing ownership of workspace to builder user..."
 echo "Attempting to change ownership of /github/workspace..."
@@ -296,11 +306,10 @@ echo "Generated .SRCINFO contents:"
 cat .SRCINFO
 echo ""
 
-# Configure git
-echo "Configuring git..."
-git config user.name "Amp"
-git config user.email "amp@ampcode.com"
-echo "Git configured successfully"
+# Verify git configuration (already set globally)
+echo "Verifying git configuration..."
+git config --list
+echo "Git configuration verified"
 echo ""
 
 # Commit and push changes

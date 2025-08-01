@@ -9,8 +9,18 @@ echo "Building Nix package for version $VERSION"
 # Install Nix if not already available
 if ! command -v nix &> /dev/null; then
   echo "Installing Nix..."
-  curl -L https://nixos.org/nix/install | sh
-  . ~/.nix-profile/etc/profile.d/nix.sh
+  curl -L https://nixos.org/nix/install | sh -s -- --daemon
+  # Source the nix environment
+  if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+    . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+  elif [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
+    . ~/.nix-profile/etc/profile.d/nix.sh
+  fi
+  # Verify nix is available
+  if ! command -v nix &> /dev/null; then
+    echo "Failed to install Nix"
+    exit 1
+  fi
 fi
 
 # Download binaries and calculate checksums
@@ -34,7 +44,7 @@ echo "Darwin ARM64: $darwin_arm64_sha"
 # Copy template to working file
 cp flake.nix.template flake.nix
 
-# Replace placeholders with actual values
+# Replace placeholders with actual values (Ubuntu sed doesn't need backup extension)
 sed -i "s/REPLACE_WITH_VERSION/$VERSION/" flake.nix
 sed -i "s/REPLACE_WITH_LINUX_X64_SHA256/$linux_x64_sha/" flake.nix
 sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/" flake.nix

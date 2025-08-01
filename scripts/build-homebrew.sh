@@ -28,11 +28,11 @@ echo "Linux x64: $linux_x64_sha"
 cp Formula/amp.rb.template Formula/amp.rb
 
 # Replace placeholders with actual values
-sed -i "s/VERSION_PLACEHOLDER/$VERSION/g" Formula/amp.rb
-sed -i "s/REPLACE_WITH_DARWIN_ARM64_SHA256/$darwin_arm64_sha/g" Formula/amp.rb
-sed -i "s/REPLACE_WITH_DARWIN_AMD64_SHA256/$darwin_x64_sha/g" Formula/amp.rb
-sed -i "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/g" Formula/amp.rb
-sed -i "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/g" Formula/amp.rb
+sed -i "" "s/VERSION_PLACEHOLDER/$VERSION/g" Formula/amp.rb
+sed -i "" "s/REPLACE_WITH_DARWIN_ARM64_SHA256/$darwin_arm64_sha/g" Formula/amp.rb
+sed -i "" "s/REPLACE_WITH_DARWIN_AMD64_SHA256/$darwin_x64_sha/g" Formula/amp.rb
+sed -i "" "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/g" Formula/amp.rb
+sed -i "" "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/g" Formula/amp.rb
 
 # Clean up downloaded files
 rm -f amp-darwin-arm64 amp-darwin-x64 amp-linux-arm64 amp-linux-x64

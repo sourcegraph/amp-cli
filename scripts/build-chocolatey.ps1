@@ -63,7 +63,8 @@ if ($NupkgFile) {
 
 # Upload package to GitHub Release
 $VersionTag = if ($Version.StartsWith('v')) { $Version } else { "v$Version" }
-gh release upload $VersionTag amp.*.nupkg --clobber
+Write-Host "Uploading package to release $VersionTag"
+gh release upload $VersionTag amp.*.nupkg --clobber --repo sourcegraph/amp-cli
 
 # Publish to Chocolatey if token is available
 if ($env:CHOCO_PUBLISH_TOKEN) {

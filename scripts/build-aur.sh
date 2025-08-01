@@ -70,7 +70,8 @@ Automated update from GitHub Actions"
 # Retry logic for AUR push
 for i in {1..3}; do
   echo "Attempt $i/3 to push to AUR"
-  if git push origin master; then
+  # Try master first, then main as fallback
+  if git push origin master 2>/dev/null || git push origin main; then
     echo "Successfully pushed to AUR on attempt $i"
     break
   else

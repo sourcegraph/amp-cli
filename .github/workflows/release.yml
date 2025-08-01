@@ -68,6 +68,8 @@ jobs:
     if: |
       github.repository == 'sourcegraph/amp-cli' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: write  # needed for git push and release upload
     strategy:
       fail-fast: false
       matrix:

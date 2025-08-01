@@ -65,7 +65,8 @@ export NIX_CONFIG="experimental-features = nix-command flakes"
 
 # Use GitHub token to avoid rate limiting if available
 if [ -n "$GITHUB_TOKEN" ]; then
-  export NIX_CONFIG="$NIX_CONFIG access-tokens = github.com=$GITHUB_TOKEN"
+  export NIX_CONFIG="$NIX_CONFIG
+access-tokens = github.com=$GITHUB_TOKEN"
 fi
 
 # Create a flake.lock file to avoid GitHub API calls during check

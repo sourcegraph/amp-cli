@@ -45,18 +45,28 @@ is_homebrew_tapped() {
     brew tap | grep -q "^sourcegraph/amp-cli$" 2>/dev/null
 }
 
-install_homebrew_tap() {
-    if ! has_homebrew; then
-        err "Homebrew is not available"
-    fi
+install_homebrew() {
+if ! has_homebrew; then
+err "Homebrew is not available"
+fi
 
-    if is_homebrew_tapped; then
-        verbose "sourcegraph/amp-cli tap is already installed"
-        return 0
-    fi
+say "Installing Amp via Homebrew..."
 
-    say "Installing sourcegraph/amp-cli tap..."
+# Install tap if not already installed
+if ! is_homebrew_tapped; then
+    verbose "Installing sourcegraph/amp-cli tap..."
     run_cmd brew tap sourcegraph/amp-cli
+else
+        verbose "sourcegraph/amp-cli tap is already installed"
+    fi
+    
+    # Install amp package
+    verbose "Installing amp package..."
+    run_cmd brew install sourcegraph/amp-cli/amp
+    
+    # Relink to ensure it's properly linked
+    verbose "Relinking amp package..."
+    run_cmd brew link --overwrite amp
 }
 
 update_homebrew_tap() {
@@ -66,7 +76,7 @@ update_homebrew_tap() {
 
     if ! is_homebrew_tapped; then
         verbose "sourcegraph/amp-cli tap is not installed, installing first..."
-        install_homebrew_tap
+        install_homebrew
         return 0
     fi
 
@@ -885,47 +895,59 @@ teardown() {
     [ "$status" -eq 1 ]
 }
 
-@test "install_homebrew_tap fails when homebrew not present" {
-    # Mock homebrew to be unavailable
-    check_cmd() {
-        [ "$1" != "brew" ]
-    }
-
-    run install_homebrew_tap
-    [ "$status" -eq 1 ]
+@test "install_homebrew fails when homebrew not present" {
+# Mock homebrew to be unavailable
+check_cmd() {
+[ "$1" != "brew" ]
 }
 
-@test "install_homebrew_tap skips when tap already installed" {
-    if ! has_homebrew; then
-        skip "homebrew not installed"
-    fi
-
-    # Mock is_homebrew_tapped to return true
-    is_homebrew_tapped() {
-        return 0
-    }
-
-    export VERBOSE=1
-    run install_homebrew_tap
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"sourcegraph/amp-cli tap is already installed"* ]]
+run install_homebrew
+[ "$status" -eq 1 ]
 }
 
-@test "install_homebrew_tap installs tap when not present" {
-    if ! has_homebrew; then
-        skip "homebrew not installed"
-    fi
+@test "install_homebrew installs tap and package" {
+if ! has_homebrew; then
+skip "homebrew not installed"
+fi
 
-    # Mock is_homebrew_tapped to return false
-    is_homebrew_tapped() {
-        return 1
-    }
+# Mock is_homebrew_tapped to return false initially
+is_homebrew_tapped() {
+return 1
+}
 
-    export AMP_DRY_RUN=1
-    run install_homebrew_tap
-    [ "$status" -eq 0 ]
+export AMP_DRY_RUN=1
+export VERBOSE=1
+run install_homebrew
+[ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp via Homebrew..."* ]]
     [[ "$output" == *"Installing sourcegraph/amp-cli tap..."* ]]
+    [[ "$output" == *"Installing amp package..."* ]]
+    [[ "$output" == *"Relinking amp package..."* ]]
     [[ "$output" == *"would run: brew tap sourcegraph/amp-cli"* ]]
+    [[ "$output" == *"would run: brew install sourcegraph/amp-cli/amp"* ]]
+    [[ "$output" == *"would run: brew link --overwrite amp"* ]]
+}
+
+@test "install_homebrew skips tap install when already tapped" {
+if ! has_homebrew; then
+skip "homebrew not installed"
+fi
+
+# Mock is_homebrew_tapped to return true
+is_homebrew_tapped() {
+return 0
+}
+
+export AMP_DRY_RUN=1
+export VERBOSE=1
+run install_homebrew
+[ "$status" -eq 0 ]
+[[ "$output" == *"Installing Amp via Homebrew..."* ]]
+    [[ "$output" == *"sourcegraph/amp-cli tap is already installed"* ]]
+    [[ "$output" == *"Installing amp package..."* ]]
+    [[ "$output" == *"Relinking amp package..."* ]]
+    [[ "$output" == *"would run: brew install sourcegraph/amp-cli/amp"* ]]
+    [[ "$output" == *"would run: brew link --overwrite amp"* ]]
 }
 
 @test "update_homebrew_tap fails when homebrew not present" {
@@ -948,10 +970,12 @@ teardown() {
         return 1
     }
 
-    # Mock install_homebrew_tap function
-    install_homebrew_tap() {
-        say "Installing sourcegraph/amp-cli tap..."
+    # Mock install_homebrew function
+    install_homebrew() {
+        say "Installing Amp via Homebrew..."
         run_cmd brew tap sourcegraph/amp-cli
+        run_cmd brew install sourcegraph/amp-cli/amp
+        run_cmd brew link --overwrite amp
     }
 
     export AMP_DRY_RUN=1
@@ -959,7 +983,7 @@ teardown() {
     run update_homebrew_tap
     [ "$status" -eq 0 ]
     [[ "$output" == *"sourcegraph/amp-cli tap is not installed, installing first..."* ]]
-    [[ "$output" == *"Installing sourcegraph/amp-cli tap..."* ]]
+    [[ "$output" == *"Installing Amp via Homebrew..."* ]]
 }
 
 @test "update_homebrew_tap updates tap when already present" {

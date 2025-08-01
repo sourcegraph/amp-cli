@@ -615,18 +615,30 @@ is_homebrew_tapped() {
     brew tap | grep -q "^sourcegraph/amp-cli$" 2>/dev/null
 }
 
-install_homebrew_tap() {
+install_homebrew() {
+    local _homebrew_tap="sourcegraph/amp-cli/amp"
+
     if ! has_homebrew; then
         err "Homebrew is not available"
     fi
 
-    if is_homebrew_tapped; then
-        verbose "sourcegraph/amp-cli tap is already installed"
-        return 0
+    say "Installing Amp via Homebrew..."
+
+    # Install tap if not already installed
+    if ! is_homebrew_tapped; then
+        verbose "Installing ${_homebrew_tap} tap..."
+        run_cmd brew tap ${_homebrew_tap}
+    else
+        verbose "${_homebrew_tap} tap is already installed"
     fi
 
-    say "Installing sourcegraph/amp-cli tap..."
-    run_cmd brew tap sourcegraph/amp-cli
+    # Install amp package
+    verbose "Installing Amp package..."
+    run_cmd brew install ${_homebrew_tap}
+
+    # Relink to ensure it's properly linked
+    verbose "Relinking Amp package..."
+    run_cmd brew link --overwrite amp
 }
 
 update_homebrew_tap() {
@@ -636,7 +648,7 @@ update_homebrew_tap() {
 
     if ! is_homebrew_tapped; then
         verbose "sourcegraph/amp-cli tap is not installed, installing first..."
-        install_homebrew_tap
+        install_homebrew
         return 0
     fi
 

@@ -49,6 +49,10 @@ cat ~/.ssh/config
 echo "Testing SSH connection with verbose output..."
 ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org 2>&1 || echo "SSH test failed as expected"
 
+# Set GIT_SSH_COMMAND to use our SSH key and config
+export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes"
+echo "GIT_SSH_COMMAND set to: $GIT_SSH_COMMAND"
+
 # Download release files to calculate checksums
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \
   --pattern "amp-linux-x64" --pattern "amp-linux-arm64"

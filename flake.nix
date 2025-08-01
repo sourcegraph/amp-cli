@@ -1,5 +1,5 @@
 {
-  description = "Amp CLI - AI-powered coding assistant";
+  description = "Amp CLI - An agentic coding tool, in research preview from Sourcegraph";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -21,14 +21,14 @@
 
         arch = archMap.${system} or (throw "Unsupported system: ${system}");
 
-        version = "0.0.1754007787-g59be4b";
+        version = "0.0.1754015686";
 
         # These will be updated with actual SHA256 hashes by the workflow
         shaMap = {
-          "linux-x64" = "9b49acd0d93a66051877b3153e1b67821c77c5bf54cc388fe9048bb9ce39a098";
-          "linux-arm64" = "28a470afae5dd51266f5e7ee5ebfae3051ea2b02277f312e886e57f34d539ac8";
-          "darwin-x64" = "3926845c500db822b462f82e831316b5f011e86e144d4e5fc236eac5201197b2";
-          "darwin-arm64" = "3a0b72bbd697d012281b09fb168a3ddbe3413b6dda442d874f425c8b8fb14052";
+          "linux-x64" = "5a6b8c0222e4bf43cd138cd1d6ddc8e53313afe5b35ede798dfcaa9fc7a15be2";
+          "linux-arm64" = "ec7753651b14628a7fed9e899ecf872ab90bf9f5f7b9de4163e9f7950f913236";
+          "darwin-x64" = "1a6820c140916057853196fd102a0495f84c02da6851301cb11261242c41ae8e";
+          "darwin-arm64" = "fa1c72ec69a0daf37c0b1e25dcbb2a0b0d54130d9ece1cde3606775ea8038f25";
         };
 
       in

@@ -166,6 +166,24 @@ doctor() {
     else
         echo "  Ubuntu: ✗"
     fi
+
+    if is_redhat; then
+        echo "  Red Hat: ✓"
+    else
+        echo "  Red Hat: ✗"
+    fi
+
+    if is_centos; then
+        echo "  CentOS: ✓"
+    else
+        echo "  CentOS: ✗"
+    fi
+
+    if is_fedora; then
+        echo "  Fedora: ✓"
+    else
+        echo "  Fedora: ✗"
+    fi
     echo ""
 
     # Package Managers
@@ -211,6 +229,70 @@ doctor() {
         echo "  Chocolatey: ✓ ($(choco --version 2>/dev/null | head -1))"
     else
         echo "  Chocolatey: ✗"
+    fi
+
+    # AUR helpers (Arch Linux only)
+    if is_archlinux; then
+        echo "  AUR Helpers:"
+        if check_cmd yay; then
+            echo "    yay: ✓ ($(yay --version 2>/dev/null | head -1))"
+        else
+            echo "    yay: ✗"
+        fi
+
+        if check_cmd paru; then
+            echo "    paru: ✓ ($(paru --version 2>/dev/null | head -1))"
+        else
+            echo "    paru: ✗"
+        fi
+    fi
+
+    # Debian/Ubuntu package managers
+    if is_debian || is_ubuntu; then
+        if check_cmd apt; then
+            echo "  apt: ✓ ($(apt --version 2>/dev/null | head -1))"
+        else
+            echo "  apt: ✗"
+        fi
+
+        if check_cmd snap; then
+            echo "  snap: ✓ ($(snap --version 2>/dev/null | head -1))"
+        else
+            echo "  snap: ✗"
+        fi
+
+        if check_cmd flatpak; then
+            echo "  flatpak: ✓ ($(flatpak --version 2>/dev/null | head -1))"
+        else
+            echo "  flatpak: ✗"
+        fi
+    fi
+
+    # RedHat/CentOS package managers
+    if is_redhat || is_centos; then
+        if check_cmd dnf; then
+            echo "  dnf: ✓ ($(dnf --version 2>/dev/null | head -1))"
+        else
+            echo "  dnf: ✗"
+        fi
+
+        if check_cmd yum; then
+            echo "  yum: ✓ ($(yum --version 2>/dev/null | head -1))"
+        else
+            echo "  yum: ✗"
+        fi
+
+        if check_cmd rpm; then
+            echo "  rpm: ✓ ($(rpm --version 2>/dev/null | head -1))"
+        else
+            echo "  rpm: ✗"
+        fi
+
+        if check_cmd snap; then
+            echo "  snap: ✓ ($(snap --version 2>/dev/null | head -1))"
+        else
+            echo "  snap: ✗"
+        fi
     fi
 
     if has_vscode; then
@@ -706,6 +788,81 @@ install_aur() {
     fi
 }
 
+# Install via APT repository (Debian/Ubuntu)
+install_deb() {
+    if ! is_debian && ! is_ubuntu; then
+        err "APT installation is only available on Debian and Ubuntu"
+    fi
+
+    if ! has_cmd apt-get; then
+        err "apt-get command not found"
+    fi
+
+    local _gpg_keyring="/usr/share/keyrings/amp-cli.gpg"
+    local _sources_list="/etc/apt/sources.list.d/amp-cli.list"
+
+    say "Installing Amp via APT repository..."
+
+    # Download and install GPG key
+    verbose "Downloading GPG key from $AMP_BINARY_ROOT/gpg/amp-cli.asc"
+    run_cmd curl -fsSL "$AMP_BINARY_ROOT/gpg/amp-cli.asc" -o /tmp/amp-cli.asc
+
+    verbose "Installing GPG key to $_gpg_keyring"
+    run_cmd sudo gpg --dearmor --yes --output "$_gpg_keyring" /tmp/amp-cli.asc
+    run_cmd rm -f /tmp/amp-cli.asc
+
+    # Add repository to sources list
+    verbose "Adding repository to $_sources_list"
+    echo "deb [signed-by=$_gpg_keyring] $AMP_BINARY_ROOT/debian stable main" | run_cmd sudo tee "$_sources_list" > /dev/null
+
+    # Update package index
+    say "Updating package index..."
+    run_cmd sudo apt-get update
+
+    # Install Amp
+    say "Installing Amp..."
+    run_cmd sudo apt-get install -y amp
+}
+
+# Install via YUM/DNF repository (RHEL/Fedora/CentOS)
+install_rpm() {
+    if ! is_rhel && ! is_fedora && ! is_centos; then
+        err "RPM installation is only available on RHEL, Fedora, and CentOS"
+    fi
+
+    local _package_manager=""
+    if has_cmd dnf; then
+        _package_manager="dnf"
+    elif has_cmd yum; then
+        _package_manager="yum"
+    else
+        err "Neither dnf nor yum package manager found"
+    fi
+
+    local _repo_file="/etc/yum.repos.d/amp-cli.repo"
+
+    say "Installing Amp via RPM repository..."
+
+    # Create repository configuration file
+    verbose "Creating repository configuration at $_repo_file"
+    cat <<EOF | run_cmd sudo tee "$_repo_file" > /dev/null
+[amp-cli]
+name=Amp CLI Repository
+baseurl=$AMP_BINARY_ROOT/rpm
+enabled=1
+gpgcheck=1
+gpgkey=$AMP_BINARY_ROOT/gpg/amp-cli.asc
+EOF
+
+    # Import GPG key
+    say "Importing GPG key..."
+    run_cmd sudo rpm --import "$AMP_BINARY_ROOT/gpg/amp-cli.asc"
+
+    # Install Amp
+    say "Installing Amp..."
+    run_cmd sudo "$_package_manager" install -y amp
+}
+
 has_pnpm() {
     check_cmd pnpm
 }
@@ -826,31 +983,39 @@ say "Installing Amp..."
 # Always install VSCode extensions first
 install_vscode_extension
 
-# Platform-specific installation logic
+# Platform-specific installation logic with package manager priority
 if is_archlinux; then
-# Use AUR on Arch Linux
-verbose "Installing Amp via AUR (Arch Linux detected)"
-install_aur
+    # Use AUR on Arch Linux
+    verbose "Installing Amp via AUR (Arch Linux detected)"
+    install_aur
+elif is_debian || is_ubuntu; then
+    # Use APT repository on Debian/Ubuntu
+    verbose "Installing Amp via APT repository (Debian/Ubuntu detected)"
+    install_deb
+elif is_rhel || is_fedora || is_centos; then
+    # Use RPM repository on RHEL/Fedora/CentOS
+    verbose "Installing Amp via RPM repository (RHEL/Fedora/CentOS detected)"
+    install_rpm
 elif is_macos || [ "$(uname -s)" = "Linux" ]; then
-# Prefer Nix over Homebrew on macOS and Linux (non-Arch)
-if has_nix; then
-verbose "Installing Amp via Nix (preferred on this platform)"
-    install_nix_flake
-elif has_homebrew; then
-verbose "Installing Amp via Homebrew (Nix not available)"
-install_homebrew
-else
+    # Prefer Nix over Homebrew on macOS and Linux (non-package manager systems)
+    if has_nix; then
+        verbose "Installing Amp via Nix (preferred on this platform)"
+        install_nix_flake
+    elif has_homebrew; then
+        verbose "Installing Amp via Homebrew (Nix not available)"
+        install_homebrew
+    else
         say "No supported package managers found (Nix or Homebrew)"
-    say "Please install Nix or Homebrew and try again"
-    return 1
-fi
+        say "Please install Nix or Homebrew and try again"
+        return 1
+    fi
 else
     say "Unsupported platform for automatic installation"
     say "Please install Amp manually from https://github.com/sourcegraph/amp-cli/releases"
-        return 1
-    fi
+    return 1
+fi
 
-    say "Amp installation completed successfully!"
+say "Amp installation completed successfully!"
 }
 
 # Operating system detection functions
@@ -868,6 +1033,22 @@ is_debian() {
 
 is_ubuntu() {
     [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null
+}
+
+is_redhat() {
+    [ -f /etc/redhat-release ] || [ -f /etc/rhel-release ] || ([ -f /etc/os-release ] && grep -q "Red Hat\|RHEL" /etc/os-release 2>/dev/null)
+}
+
+is_centos() {
+    [ -f /etc/centos-release ] || ([ -f /etc/os-release ] && grep -q "CentOS" /etc/os-release 2>/dev/null)
+}
+
+is_rhel() {
+    [ -f /etc/redhat-release ] || [ -f /etc/rhel-release ] || ([ -f /etc/os-release ] && grep -q "Red Hat\|RHEL" /etc/os-release 2>/dev/null)
+}
+
+is_fedora() {
+    ([ -f /etc/os-release ] && grep -q "Fedora" /etc/os-release 2>/dev/null)
 }
 
 is_windows() {

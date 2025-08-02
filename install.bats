@@ -278,6 +278,14 @@ is_ubuntu() {
     [ -f /etc/lsb-release ] && grep -q "Ubuntu" /etc/lsb-release 2>/dev/null
 }
 
+is_redhat() {
+    [ -f /etc/redhat-release ] || [ -f /etc/rhel-release ] || ([ -f /etc/os-release ] && grep -q "Red Hat\|RHEL" /etc/os-release 2>/dev/null)
+}
+
+is_centos() {
+    [ -f /etc/centos-release ] || ([ -f /etc/os-release ] && grep -q "CentOS" /etc/os-release 2>/dev/null)
+}
+
 is_windows() {
     case "$(uname -s)" in
         CYGWIN*|MINGW*|MSYS*)
@@ -593,6 +601,26 @@ teardown() {
         [ "$status" -eq 0 ]
     else
         run is_macos
+        [ "$status" -eq 1 ]
+    fi
+}
+
+@test "is_redhat detects Red Hat correctly" {
+    if [ -f /etc/redhat-release ] || [ -f /etc/rhel-release ] || ([ -f /etc/os-release ] && grep -q "Red Hat\|RHEL" /etc/os-release 2>/dev/null); then
+        run is_redhat
+        [ "$status" -eq 0 ]
+    else
+        run is_redhat
+        [ "$status" -eq 1 ]
+    fi
+}
+
+@test "is_centos detects CentOS correctly" {
+    if [ -f /etc/centos-release ] || ([ -f /etc/os-release ] && grep -q "CentOS" /etc/os-release 2>/dev/null); then
+        run is_centos
+        [ "$status" -eq 0 ]
+    else
+        run is_centos
         [ "$status" -eq 1 ]
     fi
 }
@@ -1417,6 +1445,168 @@ run install_homebrew
     [[ "$output" == *"No AUR helper found (yay or paru)"* ]]
     [[ "$output" == *"Please install an AUR helper or install manually:"* ]]
     [[ "$output" == *"git clone https://aur.archlinux.org/ampcode.git"* ]]
+}
+
+@test "install_deb installs on Debian systems" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_debian() { return 0; }
+    is_ubuntu() { return 1; }
+    export -f is_debian is_ubuntu
+    
+    # Mock has_cmd to simulate apt-get being available
+    has_cmd() { [ "$1" = "apt-get" ]; }
+    export -f has_cmd
+    
+    # Mock run_cmd to capture commands
+    run_cmd() { echo "run_cmd: $*"; }
+    export -f run_cmd
+    
+    run install_deb
+    
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Installing Amp via APT repository" ]]
+    [[ "$output" =~ "run_cmd: curl -fsSL" ]]
+    [[ "$output" =~ "run_cmd: sudo apt-get update" ]]
+    [[ "$output" =~ "run_cmd: sudo apt-get install -y amp" ]]
+}
+
+@test "install_deb installs on Ubuntu systems" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_debian() { return 1; }
+    is_ubuntu() { return 0; }
+    export -f is_debian is_ubuntu
+    
+    # Mock has_cmd to simulate apt-get being available
+    has_cmd() { [ "$1" = "apt-get" ]; }
+    export -f has_cmd
+    
+    # Mock run_cmd to capture commands
+    run_cmd() { echo "run_cmd: $*"; }
+    export -f run_cmd
+    
+    run install_deb
+    
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Installing Amp via APT repository" ]]
+}
+
+@test "install_deb errors on non-Debian/Ubuntu systems" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection to return false for both
+    is_debian() { return 1; }
+    is_ubuntu() { return 1; }
+    export -f is_debian is_ubuntu
+    
+    run install_deb
+    
+    [ "$status" -ne 0 ]
+    [[ "$output" =~ "APT installation is only available on Debian and Ubuntu" ]]
+}
+
+@test "install_deb errors when apt-get not available" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_debian() { return 0; }
+    is_ubuntu() { return 1; }
+    export -f is_debian is_ubuntu
+    
+    # Mock has_cmd to simulate apt-get not being available
+    has_cmd() { return 1; }
+    export -f has_cmd
+    
+    run install_deb
+    
+    [ "$status" -ne 0 ]
+    [[ "$output" =~ "apt-get command not found" ]]
+}
+
+@test "install_rpm installs on RHEL systems with dnf" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_rhel() { return 0; }
+    is_fedora() { return 1; }
+    is_centos() { return 1; }
+    export -f is_rhel is_fedora is_centos
+    
+    # Mock has_cmd to simulate dnf being available
+    has_cmd() { [ "$1" = "dnf" ]; }
+    export -f has_cmd
+    
+    # Mock run_cmd to capture commands
+    run_cmd() { echo "run_cmd: $*"; }
+    export -f run_cmd
+    
+    run install_rpm
+    
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Installing Amp via RPM repository" ]]
+    [[ "$output" =~ "run_cmd: sudo rpm --import" ]]
+    [[ "$output" =~ "run_cmd: sudo dnf install -y amp" ]]
+}
+
+@test "install_rpm installs on Fedora systems with yum fallback" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_rhel() { return 1; }
+    is_fedora() { return 0; }
+    is_centos() { return 1; }
+    export -f is_rhel is_fedora is_centos
+    
+    # Mock has_cmd to simulate only yum being available
+    has_cmd() { [ "$1" = "yum" ]; }
+    export -f has_cmd
+    
+    # Mock run_cmd to capture commands
+    run_cmd() { echo "run_cmd: $*"; }
+    export -f run_cmd
+    
+    run install_rpm
+    
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Installing Amp via RPM repository" ]]
+    [[ "$output" =~ "run_cmd: sudo yum install -y amp" ]]
+}
+
+@test "install_rpm errors on non-RPM systems" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection to return false for all
+    is_rhel() { return 1; }
+    is_fedora() { return 1; }
+    is_centos() { return 1; }
+    export -f is_rhel is_fedora is_centos
+    
+    run install_rpm
+    
+    [ "$status" -ne 0 ]
+    [[ "$output" =~ "RPM installation is only available on RHEL, Fedora, and CentOS" ]]
+}
+
+@test "install_rpm errors when no package manager available" {
+    export AMP_DRY_RUN=1
+    
+    # Mock platform detection
+    is_rhel() { return 0; }
+    is_fedora() { return 1; }
+    is_centos() { return 1; }
+    export -f is_rhel is_fedora is_centos
+    
+    # Mock has_cmd to simulate no package managers available
+    has_cmd() { return 1; }
+    export -f has_cmd
+    
+    run install_rpm
+    
+    [ "$status" -ne 0 ]
+    [[ "$output" =~ "Neither dnf nor yum package manager found" ]]
 }
 
 @test "install_cli uses AUR on Arch Linux" {

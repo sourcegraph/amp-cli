@@ -78,6 +78,9 @@ nix build .#amp
 git config --local user.email "amp@ampcode.com"
 git config --local user.name "Amp"
 
+# Ensure we're on the main branch (not detached HEAD)
+git checkout main || git checkout -b main
+
 # Retry logic for concurrent workflow conflicts
 for i in {1..5}; do
     echo "Attempt $i/5 to commit and push changes"

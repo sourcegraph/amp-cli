@@ -414,6 +414,9 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     git config --local user.email "amp@ampcode.com"
     git config --local user.name "Amp"
     echo "Local git configured"
+    
+    # Ensure we're on the main branch (not detached HEAD)
+    git checkout main || git checkout -b main
 else
     echo "Not inside a git repository – skipping local git configuration"
 fi

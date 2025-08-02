@@ -42,7 +42,7 @@
             sha256 = shaMap.${arch};
           };
 
-          buildInputs = [ pkgs.ripgrep ];
+          buildInputs = [ ];
 
           dontBuild = true;
           dontConfigure = true;

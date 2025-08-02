@@ -237,13 +237,13 @@ doctor() {
     # AUR helpers (Arch Linux only)
     if is_archlinux; then
         echo "  AUR Helpers:"
-        if check_cmd yay; then
+        if has_cmd yay; then
             echo "    yay: ✓ ($(yay --version 2>/dev/null | head -1))"
         else
             echo "    yay: ✗"
         fi
 
-        if check_cmd paru; then
+        if has_cmd paru; then
             echo "    paru: ✓ ($(paru --version 2>/dev/null | head -1))"
         else
             echo "    paru: ✗"
@@ -252,19 +252,19 @@ doctor() {
 
     # Debian/Ubuntu package managers
     if is_debian || is_ubuntu; then
-        if check_cmd apt; then
+        if has_cmd apt; then
             echo "  apt: ✓ ($(apt --version 2>/dev/null | head -1))"
         else
             echo "  apt: ✗"
         fi
 
-        if check_cmd snap; then
+        if has_cmd snap; then
             echo "  snap: ✓ ($(snap --version 2>/dev/null | head -1))"
         else
             echo "  snap: ✗"
         fi
 
-        if check_cmd flatpak; then
+        if has_cmd flatpak; then
             echo "  flatpak: ✓ ($(flatpak --version 2>/dev/null | head -1))"
         else
             echo "  flatpak: ✗"
@@ -273,25 +273,25 @@ doctor() {
 
     # RedHat/CentOS package managers
     if is_redhat || is_centos; then
-        if check_cmd dnf; then
+        if has_cmd dnf; then
             echo "  dnf: ✓ ($(dnf --version 2>/dev/null | head -1))"
         else
             echo "  dnf: ✗"
         fi
 
-        if check_cmd yum; then
+        if has_cmd yum; then
             echo "  yum: ✓ ($(yum --version 2>/dev/null | head -1))"
         else
             echo "  yum: ✗"
         fi
 
-        if check_cmd rpm; then
+        if has_cmd rpm; then
             echo "  rpm: ✓ ($(rpm --version 2>/dev/null | head -1))"
         else
             echo "  rpm: ✗"
         fi
 
-        if check_cmd snap; then
+        if has_cmd snap; then
             echo "  snap: ✓ ($(snap --version 2>/dev/null | head -1))"
         else
             echo "  snap: ✗"
@@ -358,7 +358,7 @@ doctor() {
     echo "Required Commands:"
     local _commands="curl wget mktemp chmod mkdir rm rmdir uname"
     for cmd in $_commands; do
-        if check_cmd "$cmd"; then
+        if has_cmd "$cmd"; then
             echo "  $cmd: ✓ ($(command -v "$cmd"))"
         else
             echo "  $cmd: ✗ (required)"
@@ -393,7 +393,7 @@ doctor() {
     echo ""
 
     # Nix profile status
-    if has_nix && check_cmd nix; then
+    if has_nix && has_cmd nix; then
         echo "Nix Profile Status:"
         if nix --extra-experimental-features nix-command --extra-experimental-features flakes profile list 2>/dev/null; then
             echo "  Profile list: ✓"
@@ -637,12 +637,12 @@ err() {
 }
 
 need_cmd() {
-    if ! check_cmd "$1"; then
+    if ! has_cmd "$1"; then
         err "need '$1' (command not found)"
     fi
 }
 
-check_cmd() {
+has_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
@@ -702,7 +702,7 @@ print_logo() {
 
 # Package manager detection functions
 has_homebrew() {
-    check_cmd brew
+    has_cmd brew
 }
 
 is_homebrew_tapped() {
@@ -754,11 +754,11 @@ update_homebrew_tap() {
 }
 
 has_nix() {
-    check_cmd nix-env || check_cmd nix
+    has_cmd nix-env || has_cmd nix
 }
 
 install_nix_flake() {
-    if ! check_cmd nix; then
+    if ! has_cmd nix; then
         err "Nix is not available"
     fi
 
@@ -769,7 +769,7 @@ install_nix_flake() {
 }
 
 update_nix_flake() {
-    if ! check_cmd nix; then
+    if ! has_cmd nix; then
         err "Nix is not available"
     fi
 
@@ -787,10 +787,10 @@ install_aur() {
     say "Installing Amp via AUR..."
 
     # Check for AUR helpers in order of preference
-    if check_cmd yay; then
+    if has_cmd yay; then
         verbose "Installing ampcode package via yay..."
         run_cmd yay -S --noconfirm ampcode
-    elif check_cmd paru; then
+    elif has_cmd paru; then
         verbose "Installing ampcode package via paru..."
         run_cmd paru -S --noconfirm ampcode
     else
@@ -876,39 +876,39 @@ EOF
 }
 
 has_pnpm() {
-    check_cmd pnpm
+    has_cmd pnpm
 }
 
 has_yarn() {
-    check_cmd yarn
+    has_cmd yarn
 }
 
 has_npm() {
-    check_cmd npm
+    has_cmd npm
 }
 
 has_choco() {
-    check_cmd choco
+    has_cmd choco
 }
 
 has_vscode() {
-    check_cmd code
+    has_cmd code
 }
 
 has_vscode_insiders() {
-    check_cmd code-insiders
+    has_cmd code-insiders
 }
 
 has_windsurf() {
-    check_cmd windsurf
+    has_cmd windsurf
 }
 
 has_cursor() {
-    check_cmd cursor
+    has_cmd cursor
 }
 
 has_vscodium() {
-    check_cmd codium
+    has_cmd codium
 }
 
 install_vscode_extension() {
@@ -1091,7 +1091,7 @@ is_macos() {
 migrate() {
     verbose "Checking for existing Amp Node.js installation..."
 
-    if ! check_cmd amp; then
+    if ! has_cmd amp; then
         verbose "No existing amp found on PATH"
         return 0
     fi
@@ -1159,7 +1159,7 @@ migrate() {
     # Verify removal (skip verification in dry-run mode)
     if [ "${AMP_DRY_RUN-}" ]; then
         say "Would remove existing amp installation"
-    elif check_cmd amp; then
+    elif has_cmd amp; then
         err "Failed to remove existing amp installation"
     else
         say "Successfully removed existing amp installation"

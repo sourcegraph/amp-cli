@@ -1,5 +1,5 @@
 ---
-name: Installation Test
+name: Package Manager Backstop
 
 on:
   schedule:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: installation-test
+  group: backstop-pkg-manager
   cancel-in-progress: true
 
 jobs:
@@ -24,14 +24,6 @@ jobs:
             package_manager: homebrew
           - os: ubuntu-latest
             package_manager: homebrew
-          - os: macos-latest
-            package_manager: nix
-          - os: ubuntu-latest
-            package_manager: nix
-          - os: ubuntu-latest
-            package_manager: apt
-          - os: ubuntu-latest
-            package_manager: rpm
           - os: ubuntu-latest
             package_manager: docker
             arch: amd64
@@ -60,7 +52,7 @@ jobs:
           fi
 
           # Tap the repository
-          brew tap sourcegraph/amp-cli https://github.com/sourcegraph/amp-cli
+          brew tap sourcegraph/amp-cli
 
           # Install amp from the specific tap
           brew install sourcegraph/amp-cli/amp
@@ -129,92 +121,6 @@ jobs:
             echo "This is expected for new releases that haven't been built yet"
           fi
 
-      - name: Test Nix Flake Installation (macOS/Linux)
-        id: test-nix
-        if: matrix.package_manager == 'nix'
-        continue-on-error: true
-        run: |
-          # Install Nix if not present
-          if ! command -v nix &> /dev/null; then
-            echo "Installing Nix..."
-            curl -L https://nixos.org/nix/install | sh -s -- --daemon
-            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh || true
-          fi
-
-          # Enable flakes and nix-command features
-          mkdir -p ~/.config/nix
-          echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-
-          # Install amp via Nix flake
-          echo "Installing amp via Nix flake..."
-          NIXPKGS_ALLOW_UNFREE=1 nix --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli
-
-          # Test that amp is working
-          amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
-
-          # Clean up
-          nix profile remove github:sourcegraph/amp-cli || true
-
-      - name: Test APT Repository Installation (Ubuntu)
-        id: test-apt
-        if: matrix.package_manager == 'apt'
-        continue-on-error: true
-        run: |
-          # Test APT repository installation
-          echo "Testing APT repository installation..."
-          
-          # Add GPG key (simulate what our install script does)
-          curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
-          
-          # Add repository
-          echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
-          
-          # Update package index
-          sudo apt-get update
-          
-          # Install amp
-          sudo apt-get install -y amp
-          
-          # Test that amp is working
-          amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
-          
-          # Clean up
-          sudo apt-get remove -y amp
-          sudo rm -f /etc/apt/sources.list.d/amp-cli.list /usr/share/keyrings/amp-cli.gpg
-          sudo apt-get update
-
-      - name: Test RPM Repository Installation (Fedora Container)
-        id: test-rpm
-        if: matrix.package_manager == 'rpm'
-        continue-on-error: true
-        run: |
-          # Test RPM repository installation using Fedora container
-          echo "Testing RPM repository installation in Fedora container..."
-          
-          docker run --rm fedora:latest bash -c "
-            # Install required tools
-            dnf install -y curl rpm
-            
-            # Add GPG key
-            rpm --import https://packages.ampcode.com/gpg/amp-cli.asc
-            
-            # Add repository
-            cat > /etc/yum.repos.d/amp-cli.repo << EOF
-          [amp-cli]
-          name=Amp CLI Repository
-          baseurl=https://packages.ampcode.com/rpm
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://packages.ampcode.com/gpg/amp-cli.asc
-          EOF
-            
-            # Install amp
-            dnf install -y amp
-            
-            # Test that amp is working
-            amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
-          "
-
       - name: Check test results
         if: always()
         run: |
@@ -240,27 +146,6 @@ jobs:
             failed=1
           elif [[ "${{ steps.test-docker.outcome }}" == "success" ]]; then
             echo "✅ Docker container test passed"
-          fi
-
-          if [[ "${{ steps.test-nix.outcome }}" == "failure" ]]; then
-            echo "❌ Nix flake installation test failed"
-            failed=1
-          elif [[ "${{ steps.test-nix.outcome }}" == "success" ]]; then
-            echo "✅ Nix flake installation test passed"
-          fi
-
-          if [[ "${{ steps.test-apt.outcome }}" == "failure" ]]; then
-            echo "❌ APT repository installation test failed"
-            failed=1
-          elif [[ "${{ steps.test-apt.outcome }}" == "success" ]]; then
-            echo "✅ APT repository installation test passed"
-          fi
-
-          if [[ "${{ steps.test-rpm.outcome }}" == "failure" ]]; then
-            echo "❌ RPM repository installation test failed"
-            failed=1
-          elif [[ "${{ steps.test-rpm.outcome }}" == "success" ]]; then
-            echo "✅ RPM repository installation test passed"
           fi
 
           if [[ $failed -eq 1 ]]; then

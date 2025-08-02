@@ -283,18 +283,37 @@ jobs:
           # Check if any tests failed and fail the job if so
           failed=0
 
-          if [[ "${{ steps.test-install.outcome }}" == "failure" ]]; then
-            echo "❌ Install script test failed for ${{ matrix.description }}"
-            failed=1
-          elif [[ "${{ steps.test-install.outcome }}" == "success" ]]; then
-            echo "✅ Install script test passed for ${{ matrix.description }}"
-          fi
+          # Windows is an *unsupported* platform – install & doctor MUST fail.
+          if [[ "${{ matrix.test_scenario }}" == "windows" ]]; then
+            if [[ "${{ steps.test-install.outcome }}" == "failure" ]]; then
+              echo "✅ Install script correctly failed on Windows (unsupported platform)"
+            else
+              echo "❌ Install script unexpectedly succeeded on Windows"
+              failed=1
+            fi
 
-          if [[ "${{ steps.test-doctor.outcome }}" == "failure" ]]; then
-            echo "❌ Doctor command test failed"
-            failed=1
-          elif [[ "${{ steps.test-doctor.outcome }}" == "success" ]]; then
-            echo "✅ Doctor command test passed"
+            if [[ "${{ steps.test-doctor.outcome }}" == "failure" ]]; then
+              echo "✅ Doctor command correctly failed on Windows (unsupported platform)"
+            else
+              echo "❌ Doctor command unexpectedly succeeded on Windows"
+              failed=1
+            fi
+
+          # All other platforms expect success
+          else
+            if [[ "${{ steps.test-install.outcome }}" != "success" ]]; then
+              echo "❌ Install script test failed for ${{ matrix.description }}"
+              failed=1
+            else
+              echo "✅ Install script test passed for ${{ matrix.description }}"
+            fi
+
+            if [[ "${{ steps.test-doctor.outcome }}" != "success" ]]; then
+              echo "❌ Doctor command test failed"
+              failed=1
+            else
+              echo "✅ Doctor command test passed"
+            fi
           fi
 
           if [[ "${{ steps.test-help.outcome }}" == "failure" ]]; then

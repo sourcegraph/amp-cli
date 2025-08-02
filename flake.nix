@@ -2,7 +2,7 @@
   description = "Amp CLI - An agentic coding tool, in research preview from Sourcegraph";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-stable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 

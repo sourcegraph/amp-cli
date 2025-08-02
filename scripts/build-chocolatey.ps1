@@ -76,13 +76,15 @@ if ($PackageFile) {
     exit 1
 }
 
+# 2025-08-01(ghuntley): disabled publishing to choco until initial package is through moderation
+
 # Publish to Chocolatey if token is available
-if ($env:CHOCO_PUBLISH_TOKEN) {
-    Write-Host "Publishing to Chocolatey..."
-    choco push "amp.$CleanVersion.nupkg" -s https://push.chocolatey.org/ -k $env:CHOCO_PUBLISH_TOKEN
-} else {
-    Write-Host "CHOCO_PUBLISH_TOKEN not set, skipping Chocolatey publishing"
-}
+#if ($env:CHOCO_PUBLISH_TOKEN) {
+#    Write-Host "Publishing to Chocolatey..."
+#    choco push "amp.$CleanVersion.nupkg" -s https://push.chocolatey.org/ -k $env:CHOCO_PUBLISH_TOKEN
+#} else {
+#    Write-Host "CHOCO_PUBLISH_TOKEN not set, skipping Chocolatey publishing"
+#}
 
 Set-Location ..
 Write-Host "Chocolatey package built successfully"

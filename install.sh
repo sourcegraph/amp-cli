@@ -760,10 +760,9 @@ install_nix_flake() {
     fi
 
     say "Installing Amp via Nix flake..."
-    verbose "Using nix profile install with experimental features and allowing unfree packages..."
+    verbose "Using nix profile install with experimental features..."
 
-    # Set environment variable to allow unfree packages
-    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli --no-write-lock-file
+    run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli --no-write-lock-file
 }
 
 update_nix_flake() {
@@ -772,10 +771,9 @@ update_nix_flake() {
     fi
 
     say "Updating Amp via Nix flake..."
-    verbose "Using nix profile upgrade with experimental features and allowing unfree packages..."
+    verbose "Using nix profile upgrade with experimental features..."
 
-    # Set environment variable to allow unfree packages
-    NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile upgrade github:sourcegraph/amp-cli --no-write-lock-file
+    run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile upgrade github:sourcegraph/amp-cli --no-write-lock-file
 }
 
 install_aur() {
@@ -992,15 +990,8 @@ update_vscode_extension() {
         _updated_count=$((_updated_count + 1))
     fi
 
-    # Update for VSCodium
-    if has_vscodium; then
-        verbose "Updating Amp extension for VSCodium..."
-        run_cmd codium --install-extension "$_extension_id" --force
-        _updated_count=$((_updated_count + 1))
-    fi
-
     if [ "$_updated_count" -eq 0 ]; then
-        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, Cursor, or VSCodium)"
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
     else
         say "Amp extension updated for $_updated_count editor(s)"
     fi

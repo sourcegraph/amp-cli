@@ -65,7 +65,7 @@
           meta = with pkgs.lib; {
             description = "An agentic coding tool, in research preview from Sourcegraph";
             homepage = "https://ampcode.com";
-            license = licenses.unfree;
+            license = licenses.mit;
             maintainers = [ ];
             platforms = platforms.unix;
           };

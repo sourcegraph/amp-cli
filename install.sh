@@ -338,6 +338,17 @@ doctor() {
     else
         echo "  Cursor: ✗"
     fi
+
+    if has_vscodium; then
+        echo "  VSCodium: ✓ ($(codium --version 2>/dev/null | head -1))"
+        if codium --list-extensions 2>/dev/null | grep -q "sourcegraph.amp"; then
+            echo "    Amp extension: ✓"
+        else
+            echo "    Amp extension: ✗"
+        fi
+    else
+        echo "  VSCodium: ✗"
+    fi
     echo ""
 
     # Required commands
@@ -895,6 +906,10 @@ has_cursor() {
     check_cmd cursor
 }
 
+has_vscodium() {
+    check_cmd codium
+}
+
 install_vscode_extension() {
     local _extension_id="sourcegraph.amp"
     local _installed_count=0
@@ -929,8 +944,15 @@ install_vscode_extension() {
         _installed_count=$((_installed_count + 1))
     fi
 
+    # Install for VSCodium
+    if has_vscodium; then
+        say "Installing Amp extension for VSCodium..."
+        run_cmd codium --install-extension "$_extension_id" --force
+        _installed_count=$((_installed_count + 1))
+    fi
+
     if [ "$_installed_count" -eq 0 ]; then
-        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, Cursor, or VSCodium)"
     else
         say "Amp extension installed for $_installed_count editor(s)"
     fi
@@ -970,8 +992,15 @@ update_vscode_extension() {
         _updated_count=$((_updated_count + 1))
     fi
 
+    # Update for VSCodium
+    if has_vscodium; then
+        verbose "Updating Amp extension for VSCodium..."
+        run_cmd codium --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
     if [ "$_updated_count" -eq 0 ]; then
-        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, Cursor, or VSCodium)"
     else
         say "Amp extension updated for $_updated_count editor(s)"
     fi

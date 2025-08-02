@@ -170,7 +170,7 @@ jobs:
 
           # Upload manifest to GCS
           echo "Uploading manifest.json"
-          gcloud storage cp "./repository/binaries/cli/manifest.json" "gs://packages.ampcode.com/binaries/cli/" --project=amp-prod-0
+          gcloud storage cp "./repository/cli/manifest.json" "gs://packages.ampcode.com/binaries/cli/" --project=amp-prod-0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

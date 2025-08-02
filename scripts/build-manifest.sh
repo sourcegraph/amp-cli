@@ -12,9 +12,26 @@ THIRTY_ONE_DAYS_AGO=$(date -u -d '31 days ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null
 
 # Use gh CLI to get all releases with pagination, filter by date, and format as JSON
 ALL_RELEASES=$(mktemp)
-gh release list --limit 1000 --json tagName,publishedAt,createdAt >"$ALL_RELEASES"
+if ! gh release list --limit 1000 --json tagName,publishedAt,createdAt >"$ALL_RELEASES"; then
+    echo "Failed to fetch releases from GitHub"
+    rm -f "$ALL_RELEASES"
+    exit 1
+fi
 
-jq --arg cutoff_date "$THIRTY_ONE_DAYS_AGO" '
+# Verify we got valid JSON
+if ! jq empty "$ALL_RELEASES" 2>/dev/null; then
+    echo "Invalid JSON response from GitHub API"
+    echo "Response content:"
+    cat "$ALL_RELEASES"
+    rm -f "$ALL_RELEASES"
+    exit 1
+fi
+
+# Create manifest directory if it doesn't exist
+mkdir -p "$(dirname "$MANIFEST_FILE")"
+
+# Process releases and create manifest
+if ! jq --arg cutoff_date "$THIRTY_ONE_DAYS_AGO" '
   map(select(.publishedAt >= $cutoff_date or .createdAt >= $cutoff_date)) |
   map({
     version: .tagName,
@@ -22,9 +39,19 @@ jq --arg cutoff_date "$THIRTY_ONE_DAYS_AGO" '
   }) |
   sort_by(.datetime) |
   reverse
-' "$ALL_RELEASES" >"$MANIFEST_FILE"
+' "$ALL_RELEASES" >"$MANIFEST_FILE"; then
+    echo "Failed to process releases data with jq"
+    rm -f "$ALL_RELEASES"
+    exit 1
+fi
 
 rm "$ALL_RELEASES"
+
+# Verify the manifest was created successfully
+if [ ! -f "$MANIFEST_FILE" ]; then
+    echo "Manifest file was not created at $MANIFEST_FILE"
+    exit 1
+fi
 
 echo "Manifest created at $MANIFEST_FILE"
 echo "Found $(jq 'length' "$MANIFEST_FILE") releases from the last 31 days"

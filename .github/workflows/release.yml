@@ -420,7 +420,7 @@ jobs:
 
           gsutil -m setmeta -h "Content-Type:text/html" \
             -h "Cache-Control:public, max-age=300" \
-            gs://packages.ampcode.com/manifest.json || true
+            gs://packages.ampcode.com/binaries/cli/manifest.json || true
 
           gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
             -h "Cache-Control:public, max-age=86400" \

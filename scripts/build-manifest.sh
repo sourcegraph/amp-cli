@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MANIFEST_FILE="$PROJECT_ROOT/repository/manifest.json"
+MANIFEST_FILE="$PROJECT_ROOT/repository/binaries/cli/manifest.json"
 
 echo "Building manifest from GitHub releases..."
 

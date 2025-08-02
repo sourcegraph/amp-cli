@@ -33,7 +33,7 @@ else
     asset_name="amp-linux-arm64"
 fi
 
-wget "https://packages.ampcode.com/binaries/v${VERSION}/${asset_name}"
+wget "https://packages.ampcode.com/binaries/cli/v${VERSION}/${asset_name}"
 chmod +x ${asset_name}
 
 # Create clean build directory for debian packaging

@@ -31,7 +31,7 @@ else
     asset_name="amp-linux-arm64"
 fi
 
-wget "https://packages.ampcode.com/binaries/v${VERSION}/${asset_name}"
+wget "https://packages.ampcode.com/binaries/cli/v${VERSION}/${asset_name}"
 
 # Create a tar.gz file for the RPM build process with RPM-compatible directory name
 rpm_version=$(echo "${VERSION}" | sed 's/-/./g')

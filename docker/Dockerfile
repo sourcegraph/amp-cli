@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 # Install amp binary directly
 ARG AMP_VERSION=0.0.1753952694-g23a9cc
 ARG AMP_ARCH=x64
-RUN curl -fsSL -o /usr/local/bin/amp "https://packages.ampcode.com/binaries/v${AMP_VERSION}/amp-linux-${AMP_ARCH}" \
+RUN curl -fsSL -o /usr/local/bin/amp "https://packages.ampcode.com/binaries/cli/v${AMP_VERSION}/amp-linux-${AMP_ARCH}" \
     && chmod +x /usr/local/bin/amp
 
 # Create a non-root user

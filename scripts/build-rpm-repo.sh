@@ -69,10 +69,10 @@ echo "Creating repository configuration template..."
 cat >"$REPO_DIR/amp-cli.repo" <<EOF
 [amp-cli]
 name=Amp CLI Repository
-baseurl=https://packages.ampcode.com/binaries/rpm/
+baseurl=https://packages.ampcode.com/binaries/cli/rpm/
 enabled=1
 gpgcheck=1
-gpgkey=https://packages.ampcode.com/binaries/gpg/amp-cli.asc
+gpgkey=https://packages.ampcode.com/binaries/cli/gpg/amp-cli.asc
 EOF
 
 echo "RPM repository built successfully!"

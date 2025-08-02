@@ -2,7 +2,7 @@
   description = "Amp CLI - An agentic coding tool, in research preview from Sourcegraph";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-stable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -38,7 +38,7 @@
           inherit version;
 
           src = pkgs.fetchurl {
-            url = "https://packages.ampcode.com/binaries/v${version}/amp-${arch}";
+            url = "https://packages.ampcode.com/binaries/cli/v${version}/amp-${arch}";
             sha256 = shaMap.${arch};
           };
 

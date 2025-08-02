@@ -415,6 +415,11 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     git config --local user.name "Amp"
     echo "Local git configured"
     
+    # Configure git to use GitHub token if available
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/sourcegraph/amp-cli.git"
+    fi
+    
     # Ensure we're on the main branch (not detached HEAD)
     git checkout main || git checkout -b main
 else

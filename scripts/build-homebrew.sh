@@ -54,6 +54,11 @@ rm -f amp-darwin-arm64.zip amp-darwin-x64.zip amp-linux-arm64 amp-linux-x64
 git config --local user.email "amp@ampcode.com"
 git config --local user.name "Amp"
 
+# Configure git to use GitHub token if available
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/sourcegraph/amp-cli.git"
+fi
+
 # Ensure we're on the main branch (not detached HEAD)
 git checkout main || git checkout -b main
 

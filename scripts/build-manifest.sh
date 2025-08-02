@@ -60,6 +60,11 @@ echo "Found $(jq 'length' "$MANIFEST_FILE") releases from the last 31 days"
 git config --local user.email "amp@ampcode.com"
 git config --local user.name "Amp"
 
+# Configure git to use GitHub token if available
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/sourcegraph/amp-cli.git"
+fi
+
 # Ensure we're on the main branch (not detached HEAD)
 git checkout main || git checkout -b main
 

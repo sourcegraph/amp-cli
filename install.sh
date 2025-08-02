@@ -1001,44 +1001,37 @@ update_vscode_extension() {
 }
 
 install_cli() {
-say "Installing Amp..."
+    say "Installing Amp CLI..."
 
-# Always install VSCode extensions first
-install_vscode_extension
-
-# Platform-specific installation logic with package manager priority
-if is_archlinux; then
-    # Use AUR on Arch Linux
-    verbose "Installing Amp via AUR (Arch Linux detected)"
-    install_aur
-elif is_debian || is_ubuntu; then
-    # Use APT repository on Debian/Ubuntu
-    verbose "Installing Amp via APT repository (Debian/Ubuntu detected)"
-    install_deb
-elif is_rhel || is_fedora || is_centos; then
-    # Use RPM repository on RHEL/Fedora/CentOS
-    verbose "Installing Amp via RPM repository (RHEL/Fedora/CentOS detected)"
-    install_rpm
-elif is_macos || [ "$(uname -s)" = "Linux" ]; then
-    # Prefer Nix over Homebrew on macOS and Linux (non-package manager systems)
-    if has_nix; then
-        verbose "Installing Amp via Nix (preferred on this platform)"
-        install_nix_flake
-    elif has_homebrew; then
-        verbose "Installing Amp via Homebrew (Nix not available)"
-        install_homebrew
+    # Platform-specific installation logic with package manager priority
+    if is_archlinux; then
+        # Use AUR on Arch Linux
+        verbose "Installing Amp CLI via AUR (Arch Linux detected)"
+        install_aur
+    elif is_debian || is_ubuntu; then
+        # Use APT repository on Debian/Ubuntu
+        verbose "Installing Amp CLI via APT repository (Debian/Ubuntu detected)"
+        install_deb
+    elif is_rhel || is_fedora || is_centos; then
+        # Use RPM repository on RHEL/Fedora/CentOS
+        verbose "Installing Amp CLI via RPM repository (RHEL/Fedora/CentOS detected)"
+        install_rpm
+    elif is_macos || [ "$(uname -s)" = "Linux" ]; then
+        # Prefer Nix over Homebrew on macOS and Linux (non-package manager systems)
+        if has_nix; then
+            verbose "Installing Amp CLI via Nix (preferred on this platform)"
+            install_nix_flake
+        elif has_homebrew; then
+            verbose "Installing Amp CLI via Homebrew (Nix not available)"
+            install_homebrew
+        else
+            err "No supported package managers found (Nix or Homebrew). Please install Nix or Homebrew and try again"
+        fi
     else
-        say "No supported package managers found (Nix or Homebrew)"
-        say "Please install Nix or Homebrew and try again"
-        return 1
+        err "Unsupported platform for automatic installation. Please install Amp CLI manually from https://github.com/sourcegraph/amp-cli/releases"
     fi
-else
-    say "Unsupported platform for automatic installation"
-    say "Please install Amp manually from https://github.com/sourcegraph/amp-cli/releases"
-    return 1
-fi
 
-say "Amp installation completed successfully!"
+    say "Amp CLI installation completed successfully!"
 }
 
 # Operating system detection functions

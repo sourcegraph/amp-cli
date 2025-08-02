@@ -485,7 +485,7 @@ main() {
     install_vscode_extension
     install_cli
 
-    return "$_retval"
+    return 0
 }
 
 get_architecture() {
@@ -767,7 +767,7 @@ install_deb() {
 
     # Add repository to sources list
     verbose "Adding repository to $_sources_list"
-    echo "deb [signed-by=$_gpg_keyring] $AMP_BINARY_ROOT/debian stable main" | run_cmd sudo tee "$_sources_list" > /dev/null
+    echo "deb [signed-by=$_gpg_keyring] ${AMP_BINARY_ROOT%/}/debian stable main" | run_cmd sudo tee "$_sources_list" > /dev/null
 
     # Update package index
     say "Updating package index..."

@@ -2,7 +2,7 @@
   description = "Amp CLI - An agentic coding tool, in research preview from Sourcegraph";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-stable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -65,9 +65,9 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
 
           meta = with pkgs.lib; {
-            description = "AI-powered coding assistant CLI tool";
-            homepage = "https://github.com/sourcegraph/amp-cli";
-            license = licenses.mit; # Update with actual license
+            description = "An agentic coding tool, in research preview from Sourcegraph";
+            homepage = "https://ampcode.com";
+            license = licenses.mit;
             maintainers = [ ];
             platforms = platforms.unix;
           };

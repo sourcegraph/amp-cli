@@ -4,12 +4,12 @@ name: Install Script Backstop
 on:
   schedule:
     # Run every 4 hours
-    - cron: '0 */4 * * *'
+    - cron: "0 */4 * * *"
   workflow_dispatch:
   pull_request:
     paths:
-      - 'install.sh'
-      - 'install.ps1'
+      - "install.sh"
+      - "install.ps1"
 
 concurrency:
   group: backstop-install-sh
@@ -73,7 +73,7 @@ jobs:
 
           # NixOS testing
           - os: ubuntu-latest
-            container: nixos/nix:latest
+            container: ghcr.io/determinatesystems/nix:latest
             test_scenario: nixos
             description: "NixOS container"
 
@@ -149,20 +149,20 @@ jobs:
               apt-get install -y curl wget git sudo ca-certificates gnupg
               ;;
             "fedora")
-              echo "Fedora container environment"
-              dnf update -y
-              dnf install -y curl wget git sudo rpm gnupg2
-              ;;
+            echo "Fedora container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
             "rhel"|"rocky")
-              echo "RHEL-compatible container environment"
-              dnf update -y
-              dnf install -y curl wget git sudo rpm gnupg2
-              ;;
+            echo "RHEL-compatible container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
             "centos")
-              echo "CentOS Stream container environment"
-              dnf update -y
-              dnf install -y curl wget git sudo rpm gnupg2
-              ;;
+            echo "CentOS Stream container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
             "nixos")
               echo "NixOS container environment"
               # Nix should already be available in nixos/nix container
@@ -217,11 +217,11 @@ jobs:
             "ubuntu-migrate-npm"|"ubuntu-migrate-pnpm"|"ubuntu-migrate-yarn")
               echo "✅ Should migrate from Node.js version to binary version"
               # Verify the Node.js version is no longer installed
-              if npm list -g @sourcegraph/amp 2>/dev/null | grep -q "@sourcegraph/amp"; then
+              if npm list -g --depth=0 2>/dev/null | grep -q "@sourcegraph/amp@"; then
                 echo "❌ npm global @sourcegraph/amp still installed - migration failed"
                 exit 1
               fi
-              if command -v pnpm >/dev/null && pnpm list -g @sourcegraph/amp 2>/dev/null | grep -q "@sourcegraph/amp"; then
+              if command -v pnpm >/dev/null && pnpm list -g --depth=0 2>/dev/null | grep -q "@sourcegraph/amp@"; then
                 echo "❌ pnpm global @sourcegraph/amp still installed - migration failed"
                 exit 1
               fi

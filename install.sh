@@ -1062,12 +1062,12 @@ migrate() {
 
     # Check npm global packages
     local _npm_package_name="@sourcegraph/amp"
-    if has_npm && npm list -g amp 2>/dev/null | grep -q ${_npm_package_name}; then
+    if has_npm && npm list -g --depth=0 2>/dev/null | grep -q "${_npm_package_name}@"; then
         _package_manager="npm"
         _confirm_msg="Found Amp installed via npm. Remove it?"
         _uninstall_cmd="npm uninstall -g ${_npm_package_name}"
     # Check pnpm global packages
-    elif has_pnpm && pnpm list -g amp 2>/dev/null | grep -q "${_npm_package_name}"; then
+    elif has_pnpm && pnpm list -g --depth=0 2>/dev/null | grep -q "${_npm_package_name}@"; then
         _package_manager="pnpm"
         _confirm_msg="Found Amp installed via pnpm. Remove it?"
         _uninstall_cmd="pnpm remove -g ${_npm_package_name}"

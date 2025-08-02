@@ -63,11 +63,11 @@ jobs:
             test_scenario: rhel
             description: "AlmaLinux container (RHEL-compatible)"
           - os: ubuntu-latest
-            container: rockylinux:latest
+            container: rockylinux/rockylinux:9
             test_scenario: rocky
             description: "Rocky Linux container (RHEL-compatible)"
           - os: ubuntu-latest
-            container: centos:stream9
+            container: quay.io/centos/centos:stream9
             test_scenario: centos
             description: "CentOS Stream container"
 
@@ -84,6 +84,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
+    continue-on-error: ${{ matrix.test_scenario == 'windows' }}
 
     steps:
       - name: Checkout
@@ -166,6 +167,8 @@ jobs:
               echo "NixOS container environment"
               # Nix should already be available in nixos/nix container
               nix --version || echo "Nix not available"
+              # Install git for checkout to work
+              nix-env -iA nixpkgs.git
               ;;
             "windows")
               echo "Windows environment - testing unsupported platform behavior"

@@ -16,6 +16,9 @@ set -u
 # Script version
 SCRIPT_VERSION="1.0.0"
 
+# Extension for Windows binaries; empty elsewhere
+_ext=""
+
 # If AMP_BINARY_ROOT is unset or empty, default it.
 AMP_BINARY_ROOT="${AMP_BINARY_ROOT:-https://packages.ampcode.com/}"
 
@@ -515,7 +518,7 @@ main() {
 
     if [ "$dry_run" = "no" ] && [ ! -x "$_file" ]; then
         printf '%s\n' "Cannot execute $_file (likely because of mounting /tmp as noexec)." 1>&2
-        printf '%s\n' "Please copy the file to a location where you can execute binaries and run ./amp${_ext}." 1>&2
+        printf '%s\n' "Please copy the file to a location where you can execute binaries and run ./amp." 1>&2
         exit 1
     fi
 
@@ -710,7 +713,7 @@ is_homebrew_tapped() {
 }
 
 install_homebrew() {
-    local _homebrew_tap="sourcegraph/amp-cli/amp"
+    local _homebrew_tap="sourcegraph/amp-cli"
 
     if ! has_homebrew; then
         err "Homebrew is not available"
@@ -728,7 +731,7 @@ install_homebrew() {
 
     # Install amp package
     verbose "Installing Amp package..."
-    run_cmd brew install ${_homebrew_tap}
+    run_cmd brew install ${_homebrew_tap}/amp
 
     # Relink to ensure it's properly linked
     verbose "Relinking Amp package..."

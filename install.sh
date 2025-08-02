@@ -986,7 +986,22 @@ is_nixos() {
 }
 
 is_debian() {
-    [ -f /etc/debian_version ] || [ -f /etc/lsb-release ] && grep -q "Ubuntu\|Debian" /etc/lsb-release 2>/dev/null
+    # Present on all Debian derivatives
+    if [ -f /etc/debian_version ]; then
+        return 0
+    fi
+
+    # lsb-release file (Ubuntu, some others)
+    if [ -f /etc/lsb-release ] && grep -q "Ubuntu\|Debian" /etc/lsb-release 2>/dev/null; then
+        return 0
+    fi
+
+    # Generic detection via /etc/os-release
+    if [ -f /etc/os-release ] && grep -qiE '^(ID|ID_LIKE)=.*(debian|ubuntu)' /etc/os-release; then
+        return 0
+    fi
+
+    return 1
 }
 
 is_ubuntu() {

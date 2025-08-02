@@ -9,7 +9,7 @@ echo "Building Homebrew formula for version $VERSION"
 # Download binaries and calculate checksums
 echo "Downloading binaries to calculate checksums..."
 gh release download "v${VERSION}" --repo sourcegraph/amp-cli \
-    --pattern "amp-darwin-arm64" --pattern "amp-darwin-x64.zip" \
+    --pattern "amp-darwin-arm64.zip" --pattern "amp-darwin-x64.zip" \
     --pattern "amp-linux-arm64" --pattern "amp-linux-x64"
 
 # Calculate SHA256 checksums
@@ -35,7 +35,7 @@ sed -i "" "s/REPLACE_WITH_LINUX_ARM64_SHA256/$linux_arm64_sha/g" Formula/amp.rb
 sed -i "" "s/REPLACE_WITH_LINUX_AMD64_SHA256/$linux_x64_sha/g" Formula/amp.rb
 
 # Clean up downloaded files
-rm -f amp-darwin-arm64 amp-darwin-x64 amp-linux-arm64 amp-linux-x64
+rm -f amp-darwin-arm64.zip amp-darwin-x64.zip amp-linux-arm64 amp-linux-x64
 
 # Configure git and commit changes
 git config --local user.email "amp@ampcode.com"

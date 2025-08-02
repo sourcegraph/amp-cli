@@ -387,6 +387,7 @@ main() {
 
     migrate
     install_vscode_extension
+    install_cli
 
     get_architecture || return 1
     local _arch="$RETVAL"
@@ -684,6 +685,27 @@ update_nix_flake() {
     NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes profile upgrade github:sourcegraph/amp-cli --no-write-lock-file
 }
 
+install_aur() {
+    if ! is_archlinux; then
+        err "AUR installation is only available on Arch Linux"
+    fi
+
+    say "Installing Amp via AUR..."
+
+    # Check for AUR helpers in order of preference
+    if check_cmd yay; then
+        verbose "Installing ampcode package via yay..."
+        run_cmd yay -S --noconfirm ampcode
+    elif check_cmd paru; then
+        verbose "Installing ampcode package via paru..."
+        run_cmd paru -S --noconfirm ampcode
+    else
+        err "No AUR helper found (yay or paru). Please install an AUR helper or install manually:
+  git clone https://aur.archlinux.org/ampcode.git
+  cd ampcode && makepkg -si"
+    fi
+}
+
 has_pnpm() {
     check_cmd pnpm
 }
@@ -796,6 +818,39 @@ update_vscode_extension() {
     else
         say "Amp extension updated for $_updated_count editor(s)"
     fi
+}
+
+install_cli() {
+say "Installing Amp..."
+
+# Always install VSCode extensions first
+install_vscode_extension
+
+# Platform-specific installation logic
+if is_archlinux; then
+# Use AUR on Arch Linux
+verbose "Installing Amp via AUR (Arch Linux detected)"
+install_aur
+elif is_macos || [ "$(uname -s)" = "Linux" ]; then
+# Prefer Nix over Homebrew on macOS and Linux (non-Arch)
+if has_nix; then
+verbose "Installing Amp via Nix (preferred on this platform)"
+    install_nix_flake
+elif has_homebrew; then
+verbose "Installing Amp via Homebrew (Nix not available)"
+install_homebrew
+else
+        say "No supported package managers found (Nix or Homebrew)"
+    say "Please install Nix or Homebrew and try again"
+    return 1
+fi
+else
+    say "Unsupported platform for automatic installation"
+    say "Please install Amp manually from https://github.com/sourcegraph/amp-cli/releases"
+        return 1
+    fi
+
+    say "Amp installation completed successfully!"
 }
 
 # Operating system detection functions

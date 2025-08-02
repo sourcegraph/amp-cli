@@ -108,6 +108,29 @@ update_nix_flake() {
     NIXPKGS_ALLOW_UNFREE=1 run_cmd nix --extra-experimental-features nix-command --extra-experimental-features flakes --impure profile upgrade github:sourcegraph/amp-cli
 }
 
+install_aur() {
+    if ! is_archlinux; then
+        err "AUR installation is only available on Arch Linux"
+    fi
+    
+    say "Installing Amp via AUR..."
+    
+    # Check for AUR helpers in order of preference
+    if check_cmd yay; then
+        verbose "Installing ampcode package via yay..."
+        run_cmd yay -S --noconfirm ampcode
+    elif check_cmd paru; then
+        verbose "Installing ampcode package via paru..."
+        run_cmd paru -S --noconfirm ampcode
+    else
+        say "No AUR helper found (yay or paru)"
+        say "Please install an AUR helper or install manually:"
+        say "  git clone https://aur.archlinux.org/ampcode.git"
+        say "  cd ampcode && makepkg -si"
+        return 1
+    fi
+}
+
 has_vscode() {
     check_cmd code
 }
@@ -204,6 +227,39 @@ update_vscode_extension() {
     else
         say "Amp extension updated for $_updated_count editor(s)"
     fi
+}
+
+install_cli() {
+    say "Installing Amp..."
+    
+    # Always install VSCode extensions first
+    install_vscode_extension
+    
+    # Platform-specific installation logic
+    if is_archlinux; then
+        # Use AUR on Arch Linux
+        verbose "Installing Amp via AUR (Arch Linux detected)"
+        install_aur
+    elif is_macos || [ "$(uname -s)" = "Linux" ]; then
+        # Prefer Nix over Homebrew on macOS and Linux (non-Arch)
+        if has_nix; then
+            verbose "Installing Amp via Nix (preferred on this platform)"
+            install_nix_flake
+        elif has_homebrew; then
+            verbose "Installing Amp via Homebrew (Nix not available)"
+            install_homebrew
+        else
+            say "No supported package managers found (Nix or Homebrew)"
+            say "Please install Nix or Homebrew and try again"
+            return 1
+        fi
+    else
+        say "Unsupported platform for automatic installation"
+        say "Please install Amp manually from https://github.com/sourcegraph/amp-cli/releases"
+        return 1
+    fi
+    
+    say "Amp installation completed successfully!"
 }
 
 is_archlinux() {
@@ -1159,4 +1215,232 @@ run install_homebrew
     [[ "$output" == *"Updating Amp extension for VS Code..."* ]]
     [[ "$output" == *"would run: code --install-extension sourcegraph.amp --force"* ]]
     [[ "$output" == *"Amp extension updated for 1 editor(s)"* ]]
+}
+
+# Test install_cli function
+@test "install_cli prefers nix over homebrew on supported platforms" {
+    # Mock macOS platform
+    is_macos() {
+        return 0
+    }
+    
+    # Mock both nix and homebrew available, but nix should be preferred
+    has_nix() {
+        return 0
+    }
+    
+    has_homebrew() {
+        return 0
+    }
+    
+    # Mock install functions
+    install_vscode_extension() {
+        say "Installing Amp extension for available editors..."
+    }
+    
+    install_nix_flake() {
+        say "Installing Amp via Nix flake..."
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_cli
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp..."* ]]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"Installing Amp via Nix (preferred on this platform)"* ]]
+    [[ "$output" == *"Installing Amp via Nix flake..."* ]]
+    [[ "$output" == *"Amp installation completed successfully!"* ]]
+}
+
+@test "install_cli falls back to homebrew when nix unavailable" {
+    # Mock macOS platform
+    is_macos() {
+        return 0
+    }
+    
+    # Mock only homebrew available
+    has_nix() {
+        return 1
+    }
+    
+    has_homebrew() {
+        return 0
+    }
+    
+    # Mock install functions
+    install_vscode_extension() {
+        say "Installing Amp extension for available editors..."
+    }
+    
+    install_homebrew() {
+        say "Installing Amp via Homebrew..."
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_cli
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp..."* ]]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"Installing Amp via Homebrew (Nix not available)"* ]]
+    [[ "$output" == *"Installing Amp via Homebrew..."* ]]
+    [[ "$output" == *"Amp installation completed successfully!"* ]]
+}
+
+@test "install_cli fails when no package managers available" {
+    # Mock macOS platform
+    is_macos() {
+        return 0
+    }
+    
+    # Mock no package managers available
+    has_nix() {
+        return 1
+    }
+    
+    has_homebrew() {
+        return 1
+    }
+    
+    # Mock install function
+    install_vscode_extension() {
+        say "Installing Amp extension for available editors..."
+    }
+    
+    run install_cli
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Installing Amp..."* ]]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"No supported package managers found (Nix or Homebrew)"* ]]
+    [[ "$output" == *"Please install Nix or Homebrew and try again"* ]]
+}
+
+@test "install_cli fails on unsupported platforms" {
+    # Mock unsupported platform
+    is_macos() {
+        return 1
+    }
+    
+    uname() {
+        echo "FreeBSD"
+    }
+    
+    # Mock install function
+    install_vscode_extension() {
+        say "Installing Amp extension for available editors..."
+    }
+    
+    run install_cli
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Installing Amp..."* ]]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"Unsupported platform for automatic installation"* ]]
+    [[ "$output" == *"Please install Amp manually from https://github.com/sourcegraph/amp-cli/releases"* ]]
+}
+
+# Test AUR installation
+@test "install_aur fails when not on Arch Linux" {
+    # Mock non-Arch platform
+    is_archlinux() {
+        return 1
+    }
+    
+    run install_aur
+    [ "$status" -eq 1 ]
+}
+
+@test "install_aur installs via yay when available" {
+    # Mock Arch Linux
+    is_archlinux() {
+        return 0
+    }
+    
+    # Mock yay available
+    check_cmd() {
+        case "$1" in
+            yay) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_aur
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp via AUR..."* ]]
+    [[ "$output" == *"Installing ampcode package via yay..."* ]]
+    [[ "$output" == *"would run: yay -S --noconfirm ampcode"* ]]
+}
+
+@test "install_aur installs via paru when yay unavailable" {
+    # Mock Arch Linux
+    is_archlinux() {
+        return 0
+    }
+    
+    # Mock paru available but not yay
+    check_cmd() {
+        case "$1" in
+            yay) return 1 ;;
+            paru) return 0 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_aur
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp via AUR..."* ]]
+    [[ "$output" == *"Installing ampcode package via paru..."* ]]
+    [[ "$output" == *"would run: paru -S --noconfirm ampcode"* ]]
+}
+
+@test "install_aur fails when no AUR helper available" {
+    # Mock Arch Linux
+    is_archlinux() {
+        return 0
+    }
+    
+    # Mock no AUR helpers available
+    check_cmd() {
+        case "$1" in
+            yay|paru) return 1 ;;
+            *) command -v "$1" >/dev/null 2>&1 ;;
+        esac
+    }
+    
+    run install_aur
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Installing Amp via AUR..."* ]]
+    [[ "$output" == *"No AUR helper found (yay or paru)"* ]]
+    [[ "$output" == *"Please install an AUR helper or install manually:"* ]]
+    [[ "$output" == *"git clone https://aur.archlinux.org/ampcode.git"* ]]
+}
+
+@test "install_cli uses AUR on Arch Linux" {
+    # Mock Arch Linux platform
+    is_archlinux() {
+        return 0
+    }
+    
+    # Mock install functions
+    install_vscode_extension() {
+        say "Installing Amp extension for available editors..."
+    }
+    
+    install_aur() {
+        say "Installing Amp via AUR..."
+    }
+    
+    export AMP_DRY_RUN=1
+    export VERBOSE=1
+    run install_cli
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Installing Amp..."* ]]
+    [[ "$output" == *"Installing Amp extension for available editors..."* ]]
+    [[ "$output" == *"Installing Amp via AUR (Arch Linux detected)"* ]]
+    [[ "$output" == *"Installing Amp via AUR..."* ]]
+    [[ "$output" == *"Amp installation completed successfully!"* ]]
 }

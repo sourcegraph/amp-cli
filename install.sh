@@ -485,64 +485,6 @@ main() {
     install_vscode_extension
     install_cli
 
-    get_architecture || return 1
-    local _arch="$RETVAL"
-    assert_nz "$_arch" "arch"
-
-    local _dir
-    if ! _dir="$(run_cmd mktemp -d)"; then
-        # Because the previous command ran in a subshell, we must manually
-        # propagate exit status.
-        exit 1
-    fi
-    local _file="TODO"
-
-    local _ansi_escapes_are_valid=false
-    if [ -t 2 ]; then
-        if [ "${TERM+set}" = 'set' ]; then
-            case "$TERM" in
-            xterm* | rxvt* | urxvt* | linux* | vt*)
-                _ansi_escapes_are_valid=true
-                ;;
-            esac
-        fi
-    fi
-
-    # if [ "$QUIET" -eq 0 ]; then
-    #     if $_ansi_escapes_are_valid; then
-    #         printf "\33[1minfo:\33[0m downloading amp \33[4m%s\33[0m\n" "$_url" 1>&2
-    #     else
-    #         printf 'info: downloading amp (%s)\n' "$_url" 1>&2
-    #     fi
-    # fi
-
-    if [ "$dry_run" = "no" ] && [ ! -x "$_file" ]; then
-        printf '%s\n' "Cannot execute $_file (likely because of mounting /tmp as noexec)." 1>&2
-        printf '%s\n' "Please copy the file to a location where you can execute binaries and run ./amp." 1>&2
-        exit 1
-    fi
-
-    if [ "$dry_run" = "yes" ]; then
-        run_cmd "$_file" "$@"
-    elif [ "$need_tty" = "yes" ] && [ ! -t 0 ]; then
-        # The installer is going to want to ask for confirmation by
-        # reading stdin.  This script was piped into `sh` though and
-        # doesn't have stdin to pass to its children. Instead we're going
-        # to explicitly connect /dev/tty to the installer's stdin.
-        if [ ! -t 1 ]; then
-            err "Unable to run interactively. Run with --dry-run to see what would be executed, --no-confirm to accept defaults, --help for additional options"
-        fi
-
-        run_cmd "$_file" "$@" </dev/tty
-    else
-        run_cmd "$_file" "$@"
-    fi
-
-    local _retval=$?
-
-    run_cmd rm "$_file"
-    run_cmd rmdir "$_dir"
-
     return "$_retval"
 }
 

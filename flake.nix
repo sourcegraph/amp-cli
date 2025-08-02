@@ -21,14 +21,14 @@
 
         arch = archMap.${system} or (throw "Unsupported system: ${system}");
 
-        version = "0.0.1754050083";
+        version = "0.0.1754118204";
 
         # These will be updated with actual SHA256 hashes by the workflow
         shaMap = {
-          "linux-x64" = "31a8bbdcb345bac6fea68c2fdb86f3c874818069335f7fb04812d4e4bf2e6b90";
-          "linux-arm64" = "167e5ebaace8e6d57175240cd387c2222d947339f9f74c9855bfc38f8ff109e5";
-          "darwin-x64" = "af846e94968ba7eaa05ee865427c07047a9fbe12c425986e038e9f9c0b3810d9";
-          "darwin-arm64" = "1d3eae41dcd8476b3eaf2a47627a735ea14816b5304bf0dafc88699d06d93357";
+          "linux-x64" = "90095a1ab337a001520f9812b3211332916e486c8d9d44f4841d0c96e40c28ff";
+          "linux-arm64" = "5a4154ce26b0f9d02020c1d6946e09251d3854dcda8d98d13211e22a3ce3602f";
+          "darwin-x64" = "77833b2e60aaa8d463324f22e7ee323f3f2796ea4c90be1b7b5842adacb5bef9";
+          "darwin-arm64" = "a1a2f82de37b562574288c1dc4f2e8a944b218a94dcbfb29879f039908a9d0ab";
         };
 
       in
@@ -42,6 +42,8 @@
             sha256 = shaMap.${arch};
           };
 
+          buildInputs = [ ];
+
           dontBuild = true;
           dontConfigure = true;
           dontUnpack = true;
@@ -53,7 +55,7 @@
             cp $src $out/bin/amp
             chmod +x $out/bin/amp
 
-            # Create wrapper to ensure ripgrep is in PATH at runtime
+            # Create wrapper to ensure ripgrep is in PATH
             wrapProgram $out/bin/amp \
               --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ripgrep ]}
 

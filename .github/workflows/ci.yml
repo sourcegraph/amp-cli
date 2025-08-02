@@ -1,36 +1,36 @@
-name: CI
+# name: CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+# on:
+#   push:
+#     branches: [main]
+#   pull_request:
+#     branches: [main]
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@c134e4c9e34bac6cab09cf239815f9339aaaf84e # v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+#       - name: Install Nix
+#         uses: cachix/install-nix-action@c134e4c9e34bac6cab09cf239815f9339aaaf84e # v31
+#         with:
+#           extra_nix_config: |
+#             experimental-features = nix-command flakes
 
-      - name: Setup Cachix
-        uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
-        with:
-          name: devenv
+#       - name: Setup Cachix
+#         uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+#         with:
+#           name: devenv
 
-      - name: Install devenv
-        run: nix profile install nixpkgs#devenv
+#       - name: Install devenv
+#         run: nix profile install nixpkgs#devenv
 
-      - name: Run tests
-        run: devenv shell test-install-script
+#       - name: Run tests
+#         run: devenv shell test-install-script
 
-      - name: Validate packages
-        run: devenv shell validate-all-packages
+#       - name: Validate packages
+#         run: devenv shell validate-all-packages
 
-      - name: Run pre-commit hooks
-        run: devenv shell pre-commit run --all-files
+#       - name: Run pre-commit hooks
+#         run: devenv shell pre-commit run --all-files

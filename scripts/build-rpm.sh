@@ -84,7 +84,7 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
 fi
 
 # Ensure we're on the main branch (not detached HEAD)
-git checkout main || git checkout -b main origin/main
+git checkout main || git checkout -b main
 
 # Retry logic for concurrent workflow conflicts
 for i in {1..5}; do
@@ -97,7 +97,7 @@ for i in {1..5}; do
     git add rpm/amp.spec
     if git commit -m "Update RPM spec to v$VERSION"; then
         # Try to push
-        if git push origin main; then
+        if git push --set-upstream origin main; then
             echo "Successfully pushed changes on attempt $i"
             break
         else

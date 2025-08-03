@@ -119,12 +119,17 @@ Host $host
     IdentityFile $key_file
     User $user
     UserKnownHostsFile ~/.ssh/known_hosts
+    IdentitiesOnly yes
 EOF
     chmod 600 ~/.ssh/config
 
-    # Add verified host key
-    echo "$known_host_key" >> ~/.ssh/known_hosts
+    # Add verified host key (ensure proper format)
+    echo "$known_host_key" > ~/.ssh/known_hosts
     chmod 600 ~/.ssh/known_hosts
+    
+    # Verify the host key was added correctly
+    echo "Added host key to known_hosts:"
+    cat ~/.ssh/known_hosts
 }
 
 # Export functions for use in other scripts

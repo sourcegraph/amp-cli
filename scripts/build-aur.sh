@@ -36,7 +36,7 @@ echo ""
 
 # Install required packages in Arch container
 echo "Installing required packages..."
-pacman -Syu --noconfirm git openssh github-cli sudo
+pacman -Syu --noconfirm git openssh github-cli sudo bind
 echo "Package installation completed"
 echo ""
 
@@ -94,10 +94,13 @@ setup_secure_ssh \
     "aur" \
     "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN"
 
-if ssh -o BatchMode=yes -o ConnectTimeout=10 aur@aur.archlinux.org exit 2>/dev/null; then
+echo "Testing SSH connection with verbose output..."
+if ssh -v -o BatchMode=yes -o ConnectTimeout=10 aur@aur.archlinux.org exit 2>&1; then
     echo "SSH connection successful"
 else
-    echo "SSH connection test completed (this may be expected for AUR)"
+    SSH_EXIT_CODE=$?
+    echo "SSH connection test failed with exit code: $SSH_EXIT_CODE"
+    echo "This may be expected for AUR - continuing..."
 fi
 echo ""
 
@@ -191,7 +194,13 @@ git config --list --global || echo "No global git config"
 echo ""
 
 echo "Attempting to clone AUR repository..."
+echo "Using SSH config:"
+cat ~/.ssh/config
+echo "Known hosts:"
+cat ~/.ssh/known_hosts
 echo "Running: git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo"
+# Ensure git uses our SSH configuration
+export GIT_SSH_COMMAND="ssh -F ~/.ssh/config"
 if git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo; then
     echo "AUR repository cloned successfully"
 else
@@ -207,7 +216,16 @@ else
     ping -c 3 aur.archlinux.org || true
     echo ""
     echo "DNS resolution test:"
-    nslookup aur.archlinux.org || true
+    if command -v nslookup >/dev/null 2>&1; then
+        nslookup aur.archlinux.org || true
+    elif command -v host >/dev/null 2>&1; then
+        host aur.archlinux.org || true
+    elif command -v dig >/dev/null 2>&1; then
+        dig aur.archlinux.org || true
+    else
+        echo "No DNS lookup tools available"
+        getent hosts aur.archlinux.org || true
+    fi
     exit 1
 fi
 echo ""

@@ -1,10 +1,10 @@
 Name:           amp
-Version:        1.0.0
+Version:        REPLACE_WITH_VERSION
 Release:        1%{?dist}
-Summary:        AI-powered coding assistant CLI tool
+Summary:        An agentic coding tool, in research preview from Sourcegraph
 
 License:        MIT
-URL:            https://github.com/sourcegraph/amp-cli
+URL:            https://ampcode.com
 Source0:        amp-%{version}.tar.gz
 
 # BuildArch is determined by the target architecture
@@ -15,15 +15,7 @@ Requires:       ripgrep
 %global __os_install_post %{nil}
 
 %description
-Amp CLI is an AI-powered coding assistant that helps developers write better code faster.
-It provides intelligent code suggestions, error detection, and automated refactoring capabilities.
-
-Features:
-- AI-powered code suggestions
-- Error detection and fixing
-- Automated refactoring
-- Cross-platform support
-- Easy command-line interface
+Amp is an agentic coding tool engineered to maximize what’s possible with today’s frontier models—autonomous reasoning, comprehensive code editing, and complex task execution.
 
 %prep
 %setup -q
@@ -37,10 +29,3 @@ install -m 0755 amp %{buildroot}%{_bindir}/amp
 
 %files
 %{_bindir}/amp
-
-%changelog
-* Tue Jul 29 2025 Sourcegraph <amp-devs@sourcegraph.com> - 1.0.0-1
-- Initial release
-- AI-powered coding assistant CLI tool
-- Cross-platform support for Linux, macOS, and Windows
-- Ripgrep integration for fast code search

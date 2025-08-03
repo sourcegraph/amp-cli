@@ -92,45 +92,92 @@ if ($PackageFile) {
 Set-Location ..
 
 # Configure git and commit changes
+Write-Host "=== GIT DEBUGGING STARTED ==="
+Write-Host "Current working directory: $(Get-Location)"
+Write-Host "Git status before any operations:"
+git status --porcelain=v1 2>&1 | Write-Host
+Write-Host "Git branch list:"
+git branch -a 2>&1 | Write-Host
+Write-Host "Git remote info:"
+git remote -v 2>&1 | Write-Host
+Write-Host "Current HEAD:"
+git rev-parse HEAD 2>&1 | Write-Host
+
 git config --local user.email "amp@ampcode.com"
 git config --local user.name "Amp"
 
 # Configure git to use GitHub token if available
 if ($env:GITHUB_TOKEN) {
+    Write-Host "Setting up GitHub token authentication"
     git remote set-url origin "https://x-access-token:$($env:GITHUB_TOKEN)@github.com/sourcegraph/amp-cli.git"
+    Write-Host "Remote URL updated to use token"
 }
 
 # Ensure we're on the main branch (not detached HEAD)
-git checkout main 2>$null
+Write-Host "Attempting to checkout main branch..."
+git checkout main 2>&1 | Write-Host
+Write-Host "Checkout main exit code: $LASTEXITCODE"
+
 if ($LASTEXITCODE -ne 0) {
-    git checkout -b main
+    Write-Host "Main branch doesn't exist, creating it..."
+    git checkout -b main 2>&1 | Write-Host
+    Write-Host "Create main branch exit code: $LASTEXITCODE"
 }
+
+Write-Host "After branch setup:"
+Write-Host "Current branch:"
+git branch --show-current 2>&1 | Write-Host
+Write-Host "All branches:"
+git branch -a 2>&1 | Write-Host
 
 # Retry logic for concurrent workflow conflicts
 for ($i = 1; $i -le 5; $i++) {
     Write-Host "Attempt $i/5 to commit and push changes"
 
     # Pull latest changes
-    git pull origin main 2>$null
+    Write-Host "Pulling latest changes from origin/main..."
+    git pull origin main 2>&1 | Write-Host
+    Write-Host "Pull exit code: $LASTEXITCODE"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Pull failed, continuing anyway..."
     }
 
     # Add and commit changes
+    Write-Host "Adding files to git..."
     git add chocolatey/amp.nuspec chocolatey/tools/chocolateyinstall.ps1
-    git commit -m "Update Chocolatey package to v$Version" 2>$null
+    Write-Host "Files added. Attempting commit..."
+    
+    Write-Host "Git status before commit:"
+    git status --porcelain=v1 2>&1 | Write-Host
+    
+    git commit -m "Update Chocolatey package to v$Version" 2>&1 | Write-Host
+    Write-Host "Commit exit code: $LASTEXITCODE"
+    
     if ($LASTEXITCODE -eq 0) {
+        Write-Host "Commit successful. Current branch and HEAD info:"
+        git branch --show-current 2>&1 | Write-Host
+        git rev-parse HEAD 2>&1 | Write-Host
+        git log --oneline -1 2>&1 | Write-Host
+        
         # Try to push
-        git push --set-upstream origin main 2>$null
+        Write-Host "Attempting to push to origin main..."
+        git push --set-upstream origin main 2>&1 | Write-Host
+        Write-Host "Push exit code: $LASTEXITCODE"
+        
         if ($LASTEXITCODE -eq 0) {
             Write-Host "Successfully pushed changes on attempt $i"
             break
         } else {
             Write-Host "Push failed on attempt $i, retrying..."
+            Write-Host "Current git state after failed push:"
+            git status 2>&1 | Write-Host
+            git branch -a 2>&1 | Write-Host
             Start-Sleep ($i * 2)
         }
     } else {
         Write-Host "No changes to commit on attempt $i"
+        Write-Host "Git status after failed commit:"
+        git status 2>&1 | Write-Host
         break
     }
 }

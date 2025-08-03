@@ -112,13 +112,14 @@ setup_secure_ssh() {
     fi
 
     # Create SSH config with secure settings
+    local known_hosts_file="$HOME/.ssh/known_hosts"
     cat > ~/.ssh/config << EOF
 Host $host
     StrictHostKeyChecking yes
     LogLevel ERROR
     IdentityFile $key_file
     User $user
-    UserKnownHostsFile ~/.ssh/known_hosts
+    UserKnownHostsFile $known_hosts_file
     IdentitiesOnly yes
 EOF
     chmod 600 ~/.ssh/config
@@ -130,6 +131,7 @@ EOF
     # Verify the host key was added correctly
     echo "Added host key to known_hosts:"
     cat ~/.ssh/known_hosts
+    echo "Known hosts file path: ~/.ssh/known_hosts ($(realpath ~/.ssh/known_hosts))"
 }
 
 # Export functions for use in other scripts

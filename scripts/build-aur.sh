@@ -194,13 +194,17 @@ git config --list --global || echo "No global git config"
 echo ""
 
 echo "Attempting to clone AUR repository..."
+echo "HOME directory: $HOME"
+echo "SSH directory listing:"
+ls -la ~/.ssh/
 echo "Using SSH config:"
 cat ~/.ssh/config
 echo "Known hosts:"
 cat ~/.ssh/known_hosts
 echo "Running: git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo"
-# Ensure git uses our SSH configuration
-export GIT_SSH_COMMAND="ssh -F ~/.ssh/config"
+# Ensure git uses our SSH configuration with specific known_hosts
+export GIT_SSH_COMMAND="ssh -F ~/.ssh/config -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+echo "GIT_SSH_COMMAND: $GIT_SSH_COMMAND"
 if git clone ssh://aur@aur.archlinux.org/ampcode.git aur-repo; then
     echo "AUR repository cloned successfully"
 else

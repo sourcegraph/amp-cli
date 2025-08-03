@@ -109,6 +109,11 @@ doctor() {
     echo "=================================================="
     echo ""
 
+    # Windows is not supported - fail early with diagnostic info
+    if is_windows; then
+        err "Amp CLI is not yet available for Windows – please use WSL or Docker."
+    fi
+
     # Basic system information
     echo "System Information:"
     echo "  OS: $(uname -s)"

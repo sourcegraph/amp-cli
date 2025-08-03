@@ -120,9 +120,10 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y nodejs npm curl wget git sudo ca-certificates gnupg
               # Install pnpm and then @sourcegraph/amp
-              sudo npm install -g pnpm
-              sudo pnpm setup
-              sudo pnpm add -g @sourcegraph/amp
+              npm install -g pnpm
+              pnpm setup -y
+              . ~/.bashrc          # load PNPM_HOME & PATH
+              pnpm add -g @sourcegraph/amp
               echo "Installed @sourcegraph/amp via pnpm globally"
               amp --version || echo "amp command available from pnpm installation"
               ;;

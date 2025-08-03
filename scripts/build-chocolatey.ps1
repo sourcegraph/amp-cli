@@ -35,7 +35,7 @@ Write-Host "Windows executable checksum: $WindowsChecksum"
 Copy-Item "chocolatey/tools/chocolateyinstall.ps1.template" "chocolatey/tools/chocolateyinstall.ps1" -Force
 
 # Update download URL in install script (use original version with SHA for actual download)
-(Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace 'REPLACE_WITH_VERSION', "v$Version" |
+(Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace 'REPLACE_WITH_VERSION', $Version |
     Set-Content chocolatey/tools/chocolateyinstall.ps1
 
 # Update checksum in install script

@@ -47,6 +47,7 @@
           dontBuild = true;
           dontConfigure = true;
           dontUnpack = true;
+          dontStrip = true;
 
           installPhase = ''
             runHook preInstall

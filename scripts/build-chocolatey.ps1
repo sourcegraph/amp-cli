@@ -101,10 +101,8 @@ if ($env:GITHUB_TOKEN) {
 }
 
 # Ensure we're on the main branch (not detached HEAD)
-try {
-    git checkout main
-} catch {
-    # Create main branch
+git checkout main 2>$null
+if ($LASTEXITCODE -ne 0) {
     git checkout -b main
 }
 
@@ -113,26 +111,25 @@ for ($i = 1; $i -le 5; $i++) {
     Write-Host "Attempt $i/5 to commit and push changes"
 
     # Pull latest changes
-    try {
-        git pull origin main
-    } catch {
+    git pull origin main 2>$null
+    if ($LASTEXITCODE -ne 0) {
         Write-Host "Pull failed, continuing anyway..."
     }
 
     # Add and commit changes
     git add chocolatey/amp.nuspec chocolatey/tools/chocolateyinstall.ps1
-    try {
-        git commit -m "Update Chocolatey package to v$Version"
+    git commit -m "Update Chocolatey package to v$Version" 2>$null
+    if ($LASTEXITCODE -eq 0) {
         # Try to push
-        try {
-            git push --set-upstream origin main
+        git push --set-upstream origin main 2>$null
+        if ($LASTEXITCODE -eq 0) {
             Write-Host "Successfully pushed changes on attempt $i"
             break
-        } catch {
+        } else {
             Write-Host "Push failed on attempt $i, retrying..."
             Start-Sleep ($i * 2)
         }
-    } catch {
+    } else {
         Write-Host "No changes to commit on attempt $i"
         break
     }

@@ -13,6 +13,7 @@ if ! command -v nix &>/dev/null; then
     curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
     # Source the nix environment
     if [ -f ~/.nix-profile/etc/profile.d/nix.sh ]; then
+        # shellcheck source=/dev/null
         . ~/.nix-profile/etc/profile.d/nix.sh
     fi
     # Verify nix is available
@@ -94,7 +95,7 @@ for i in {1..5}; do
     git pull origin main || true
 
     # Add and commit changes
-    git add flake.nix
+    git add flake.nix flake.lock
     if git commit -m "Update Nix flake to v$VERSION"; then
         # Try to push
         if git push; then

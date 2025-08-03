@@ -87,4 +87,56 @@ if ($PackageFile) {
 #}
 
 Set-Location ..
+
+# Configure git and commit changes
+git config --local user.email "amp@ampcode.com"
+git config --local user.name "Amp"
+
+# Configure git to use GitHub token if available
+if ($env:GITHUB_TOKEN) {
+    git remote set-url origin "https://x-access-token:$($env:GITHUB_TOKEN)@github.com/sourcegraph/amp-cli.git"
+}
+
+# Ensure we're on the main branch (not detached HEAD)
+try {
+    git checkout main
+} catch {
+    git checkout -b main
+}
+
+# Retry logic for concurrent workflow conflicts
+for ($i = 1; $i -le 5; $i++) {
+    Write-Host "Attempt $i/5 to commit and push changes"
+
+    # Pull latest changes
+    try {
+        git pull origin main
+    } catch {
+        Write-Host "Pull failed, continuing anyway..."
+    }
+
+    # Add and commit changes
+    git add chocolatey/amp.nuspec
+    try {
+        git commit -m "Update Chocolatey package to v$Version"
+        # Try to push
+        try {
+            git push
+            Write-Host "Successfully pushed changes on attempt $i"
+            break
+        } catch {
+            Write-Host "Push failed on attempt $i, retrying..."
+            Start-Sleep ($i * 2)
+        }
+    } catch {
+        Write-Host "No changes to commit on attempt $i"
+        break
+    }
+}
+
+if ($i -gt 5) {
+    Write-Host "Failed to push after 5 attempts"
+    exit 1
+}
+
 Write-Host "Chocolatey package built successfully"

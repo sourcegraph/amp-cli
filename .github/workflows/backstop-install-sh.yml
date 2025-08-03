@@ -197,7 +197,7 @@ jobs:
             "arch-linux")
               echo "Testing as non-root user for AUR support"
               # Test as testuser for AUR functionality
-              su - testuser -c "cd /github/workspace && ./install/install.sh --no-confirm --verbose"
+              su - testuser -c "cd $GITHUB_WORKSPACE && ./install/install.sh --no-confirm --verbose"
               ;;
             "windows")
               echo "Testing Windows (should show unsupported platform)"
@@ -205,7 +205,7 @@ jobs:
               ;;
             *)
               echo "Testing standard install script execution"
-              ./install/install.sh --no-confirm --verbose
+              sudo ./install/install.sh --no-confirm --verbose
               ;;
           esac
         shell: bash

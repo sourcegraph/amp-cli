@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
 VERSION="$1"
 VERSION="${VERSION#v}"
 
@@ -10,8 +13,12 @@ echo "==============================================="
 echo "Current working directory: $(pwd)"
 echo "Current user: $(whoami)"
 echo "User ID: $(id)"
-echo "Environment variables (without secrets):"
-env | grep -v -E "(KEY|TOKEN|SECRET|PASSWORD)" | sort
+
+# Mask all secrets immediately
+mask_secrets
+
+echo "Environment variables (safe only):"
+safe_env_log
 echo ""
 
 echo "Directory contents:"
@@ -72,89 +79,26 @@ echo ""
 echo "Checking for AUR SSH private key..."
 if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
     echo "ERROR: AUR_SSH_PRIVATE_KEY environment variable not set"
-    echo "Available environment variables:"
-    env | grep -i aur || echo "No AUR-related environment variables found"
     exit 1
 fi
-echo "AUR_SSH_PRIVATE_KEY is set (length: ${#AUR_SSH_PRIVATE_KEY} characters)"
+echo "AUR_SSH_PRIVATE_KEY is configured"
 echo ""
 
-# SSH setup with verbose debugging -----------------------------------
-echo "Setting up SSH configuration..."
-echo "Creating ~/.ssh directory..."
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-echo "SSH directory created with permissions: $(ls -ld ~/.ssh)"
+# SSH setup with secure configuration -----------------------------------
+echo "Setting up secure SSH configuration..."
 
-echo "Writing SSH private key to file (not displaying content)..."
-echo "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' >~/.ssh/aur
-chmod 600 ~/.ssh/aur
-echo "SSH key file created with permissions: $(ls -l ~/.ssh/aur)"
+# Use the secure SSH setup function
+setup_secure_ssh \
+    "$AUR_SSH_PRIVATE_KEY" \
+    "aur.archlinux.org" \
+    "aur" \
+    "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jRsD26/Ux5kh6vqMfSiXz"
 
-echo "SSH key setup complete. Testing SSH key format..."
-if ssh-keygen -l -f ~/.ssh/aur; then
-    echo "SSH key format is valid"
+if ssh -o BatchMode=yes -o ConnectTimeout=10 aur@aur.archlinux.org exit 2>/dev/null; then
+    echo "SSH connection successful"
 else
-    echo "ERROR: SSH key format check failed"
-    echo "SSH key file size: $(wc -c <~/.ssh/aur) bytes"
-    echo "SSH key first line (redacted): $(head -1 ~/.ssh/aur | sed 's/[a-zA-Z0-9+/=]/-/g')"
-    exit 1
+    echo "SSH connection test completed (this may be expected for AUR)"
 fi
-
-# record current host key with verbose output
-echo "Running ssh-keyscan for aur.archlinux.org..."
-if ssh-keyscan -v -t ed25519,rsa aur.archlinux.org >>~/.ssh/known_hosts 2>&1; then
-    echo "SSH keyscan completed successfully"
-else
-    echo "ERROR: SSH keyscan failed"
-    exit 1
-fi
-
-echo "Contents of known_hosts:"
-cat ~/.ssh/known_hosts
-echo ""
-
-echo "Creating SSH config file..."
-cat >~/.ssh/config <<EOF
-Host aur.archlinux.org
-  User                 aur
-  IdentityFile         ~/.ssh/aur
-  IdentitiesOnly       yes
-  StrictHostKeyChecking no
-  UserKnownHostsFile   ~/.ssh/known_hosts
-  LogLevel             DEBUG3
-EOF
-
-echo "SSH config created successfully:"
-cat ~/.ssh/config
-echo ""
-
-echo "SSH config file permissions: $(ls -l ~/.ssh/config)"
-echo ""
-
-echo "Testing SSH connection with verbose output..."
-echo "Running: ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org"
-if ssh -vvv -o BatchMode=yes -T aur@aur.archlinux.org 2>&1; then
-    echo "SSH connection test passed"
-else
-    SSH_EXIT_CODE=$?
-    echo "SSH connection test failed with exit code: $SSH_EXIT_CODE (this may be expected for AUR)"
-fi
-echo ""
-
-# Test SSH connection with our key specifically
-echo "Testing SSH with our specific key and settings..."
-echo "Running: ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -vvv -T aur@aur.archlinux.org"
-if ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -vvv -T aur@aur.archlinux.org 2>&1; then
-    echo "SSH key test passed"
-else
-    SSH_KEY_EXIT_CODE=$?
-    echo "SSH key test failed with exit code: $SSH_KEY_EXIT_CODE (this may be expected for AUR)"
-fi
-echo ""
-
-# Set GIT_SSH_COMMAND to use our SSH key and config
-export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes"
-echo "GIT_SSH_COMMAND set to: $GIT_SSH_COMMAND"
 echo ""
 
 # Show public key for debugging

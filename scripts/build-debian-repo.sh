@@ -5,6 +5,12 @@
 
 set -euo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
+# Mask all secrets immediately
+mask_secrets
+
 DEB_DIR=${1:-"./debs"}
 REPO_DIR=${2:-"repository/debian"}
 DIST="stable"
@@ -99,31 +105,30 @@ if [ -n "$GPG_KEY_ID" ]; then
     gpg --list-secret-keys --keyid-format LONG
     echo "======================================="
     
-    # Sign with explicit batch and pinentry-mode options using secure passphrase handling
+    # Sign with secure GPG handling
     echo "Creating Release.gpg signature..."
     if [ -n "${GPG_PASSPHRASE:-}" ]; then
-        # Use secure passphrase file method
-        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
-        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
-        chmod 600 "$PASSPHRASE_FILE"
-        
-        gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --default-key "$GPG_KEY_ID" --armor --detach-sign --output "$REPO_DIR/dists/$DIST/Release.gpg" "$release_file" 2>/dev/null
-        
-        rm -f "$PASSPHRASE_FILE"
+        secure_gpg_sign \
+            "$release_file" \
+            "$REPO_DIR/dists/$DIST/Release.gpg" \
+            "$GPG_KEY_ID" \
+            "$GPG_PASSPHRASE"
     else
         gpg --batch --yes --no-tty --pinentry-mode loopback --default-key "$GPG_KEY_ID" --armor --detach-sign --output "$REPO_DIR/dists/$DIST/Release.gpg" "$release_file" 2>/dev/null
     fi
     
     echo "Creating InRelease signature..."
     if [ -n "${GPG_PASSPHRASE:-}" ]; then
-        # Use secure passphrase file method
-        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
-        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
-        chmod 600 "$PASSPHRASE_FILE"
+        # Create secure temporary passphrase file  
+        local passphrase_file
+        passphrase_file=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
+        chmod 600 "$passphrase_file"
+        trap 'rm -f "$passphrase_file"' EXIT
+        printf '%s' "$GPG_PASSPHRASE" > "$passphrase_file"
         
-        gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --default-key "$GPG_KEY_ID" --digest-algo SHA256 --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file" 2>/dev/null
+        gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$passphrase_file" --default-key "$GPG_KEY_ID" --digest-algo SHA256 --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file" 2>/dev/null
         
-        rm -f "$PASSPHRASE_FILE"
+        rm -f "$passphrase_file"
     else
         gpg --batch --yes --no-tty --pinentry-mode loopback --default-key "$GPG_KEY_ID" --digest-algo SHA256 --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file" 2>/dev/null
     fi

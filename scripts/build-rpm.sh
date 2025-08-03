@@ -1,9 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
 VERSION="$1"
 VERSION="${VERSION#v}"
 ARCH="${2:-}"
+
+# Mask all secrets immediately
+mask_secrets
 
 if [ -z "$ARCH" ]; then
     echo "Error: Architecture parameter required"
@@ -80,9 +86,10 @@ fi
 echo "Signing RPM packages with internal signatures..."
 
 # Create secure temporary passphrase file
-PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
-echo "$DEB_GPG_PASSWORD" > "$PASSPHRASE_FILE"
+PASSPHRASE_FILE=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
 chmod 600 "$PASSPHRASE_FILE"
+trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+printf '%s' "$DEB_GPG_PASSWORD" > "$PASSPHRASE_FILE"
 
 # Configure GPG agent to use the passphrase file
 export PINENTRY_USER_DATA="$PASSPHRASE_FILE"

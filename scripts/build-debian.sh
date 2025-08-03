@@ -1,9 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
 VERSION="$1"
 VERSION="${VERSION#v}"
 ARCH="${2:-}"
+
+# Mask all secrets immediately
+mask_secrets
 
 if [ -z "$ARCH" ]; then
     echo "Error: Architecture parameter required"
@@ -12,9 +18,9 @@ fi
 
 echo "Building Debian package for version $VERSION, architecture $ARCH"
 
-# Setup GPG
-echo "$DEB_GPG_PRIVATE_KEY" | gpg --batch --import
-echo "$DEB_GPG_PUBLIC_KEY" | gpg --batch --import
+# Setup GPG securely
+printf '%s' "$DEB_GPG_PRIVATE_KEY" | gpg --batch --import
+printf '%s' "$DEB_GPG_PUBLIC_KEY" | gpg --batch --import
 
 # Build for the specified architecture
 arch="$ARCH"
@@ -70,18 +76,12 @@ sed -i "s/REPLACE_WITH_INSTALLED_SIZE/$size/g" debian/control
 # Build package
 dpkg-deb --build pkgroot amp_${VERSION}-1_$arch.deb
 
-# Sign the package
-# Create secure temporary passphrase file
-PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
-echo "$DEB_GPG_PASSWORD" > "$PASSPHRASE_FILE"
-chmod 600 "$PASSPHRASE_FILE"
-
-gpg --batch --yes --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" \
-    --default-key "$DEB_GPG_KEY_ID" \
-    --armor --detach-sign amp_${VERSION}-1_$arch.deb
-
-# Clean up passphrase file
-rm -f "$PASSPHRASE_FILE"
+# Sign the package securely
+secure_gpg_sign \
+    "amp_${VERSION}-1_$arch.deb" \
+    "amp_${VERSION}-1_$arch.deb.asc" \
+    "$DEB_GPG_KEY_ID" \
+    "$DEB_GPG_PASSWORD"
 
 # Attach DEB to GitHub Release
 version_tag="v${VERSION}"

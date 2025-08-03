@@ -1,10 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
 VERSION="$1"
 VERSION="${VERSION#v}"
 ARCH="${2:-}"
 PLATFORM="${3:-}"
+
+# Mask all secrets immediately
+mask_secrets
 
 if [ -z "$ARCH" ] || [ -z "$PLATFORM" ]; then
     echo "Error: Architecture and platform parameters required"
@@ -22,7 +28,7 @@ if [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_ACTOR" ]; then
     echo "Missing GITHUB_TOKEN or GITHUB_ACTOR environment variables"
     exit 1
 fi
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+printf '%s' "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
 # Build and push for the specified platform
 platform="$PLATFORM"

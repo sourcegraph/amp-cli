@@ -409,7 +409,7 @@ jobs:
         continue-on-error: true
         run: |
           set -eo pipefail
-          # Test AUR installation using Arch Linux container with yay and paru
+          # Test AUR installation using Arch Linux container with paru built from source
           echo "Testing AUR installation in Arch Linux container..."
 
           docker run --rm archlinux:base-devel bash -c "
@@ -419,16 +419,25 @@ jobs:
             pacman -Sy --noconfirm
 
             echo '=== Installing dependencies ==='
-            pacman -S --noconfirm git base-devel sudo paru
+            pacman -S --noconfirm git base-devel sudo
 
             # Create a non-root user for AUR operations (required for makepkg)
             echo '=== Creating non-root user ==='
             useradd -m -G wheel testuser
             echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
+            # Build paru from source as non-root user
+            echo '=== Building paru from source ==='
+            su - testuser -c '
+              cd /tmp
+              git clone https://aur.archlinux.org/paru-bin.git
+              cd paru-bin
+              makepkg -si --noconfirm
+            '
+
             # Verify paru is installed
             echo '=== Verifying paru installation ==='
-            which paru && paru --version
+            su - testuser -c 'command -v paru && paru --version'
 
             # Test amp installation via AUR using paru
             echo '=== Installing amp via paru ==='
@@ -436,7 +445,7 @@ jobs:
 
             # Test that amp is working
             echo '=== Testing amp installation ==='
-            which amp || echo 'amp not in PATH'
+            command -v amp || echo 'amp not in PATH'
             amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
           "
 

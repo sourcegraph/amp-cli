@@ -79,7 +79,7 @@ for i in {1..5}; do
     git add "$MANIFEST_FILE"
     if git commit -m "Update manifest with latest releases"; then
         # Try to push
-        if git push; then
+        if git push --set-upstream origin main; then
             echo "Successfully pushed changes on attempt $i"
             exit 0
         else

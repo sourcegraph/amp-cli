@@ -98,7 +98,7 @@ for i in {1..5}; do
     git add flake.nix flake.lock
     if git commit -m "Update Nix flake to v$VERSION"; then
         # Try to push
-        if git push; then
+        if git push --set-upstream origin main; then
             echo "Successfully pushed changes on attempt $i"
             exit 0
         else

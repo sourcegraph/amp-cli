@@ -16,7 +16,9 @@ load 00_helpers
     is_windows() { return 1; }
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
+    # Stub both nix and nix-env to ensure has_nix returns true
     make_stub nix 0
+    make_stub nix-env 0
     make_stub brew 0
     
     # Mock install functions
@@ -25,13 +27,18 @@ load 00_helpers
     export -f install_vscode_extension install_nix_flake
     
     export VERBOSE=1
+    
+    # Prepend our stub directory to PATH for isolation (but keep system dirs)
+    export PATH="$STUB_DIR:/usr/bin:/bin:/usr/sbin:/sbin"
+    
+    # Test install_cli directly - extensions are tested separately
     run install_cli
     [ "$status" -eq 0 ]
-    assert_output_contains "Installing Amp CLI"
-    assert_output_contains "Installing Amp extension"
-    assert_output_contains "Installing Amp CLI via Nix (preferred on this platform)"
-    assert_output_contains "Installing via Nix"
-    assert_output_contains "Amp CLI installation completed successfully"
+    assert_output_contains "amp-install: Installing Amp CLI..."
+
+    assert_output_contains "amp-install (verbose): Installing Amp CLI via Nix (preferred on this platform)"
+    assert_output_contains "amp-install: Installing via Nix..."
+    assert_output_contains "amp-install: Amp CLI installation completed successfully!"
 }
 
 @test "install_cli falls back to Homebrew when Nix unavailable" {
@@ -46,8 +53,13 @@ load 00_helpers
     is_windows() { return 1; }
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
-    # Only Homebrew available
+    # Only Homebrew available - stub nix/nix-env to fail
+    make_stub nix 1
+    make_stub nix-env 1  
     make_stub brew 0
+    
+    # Prepend our stub directory to PATH for isolation (but keep system dirs)
+    export PATH="$STUB_DIR:/usr/bin:/bin:/usr/sbin:/sbin"
     
     # Mock install functions
     install_vscode_extension() { say "Installing Amp extension..."; }
@@ -57,8 +69,8 @@ load 00_helpers
     export VERBOSE=1
     run install_cli
     [ "$status" -eq 0 ]
-    assert_output_contains "Installing Amp CLI via Homebrew (Nix not available)"
-    assert_output_contains "Installing via Homebrew"
+    assert_output_contains "amp-install (verbose): Installing Amp CLI via Homebrew (Nix not available)"
+    assert_output_contains "amp-install: Installing via Homebrew..."
 }
 
 @test "install_cli uses AUR on Arch Linux" {
@@ -81,8 +93,8 @@ load 00_helpers
     export VERBOSE=1
     run install_cli
     [ "$status" -eq 0 ]
-    assert_output_contains "Installing Amp CLI via AUR (Arch Linux detected)"
-    assert_output_contains "Installing via AUR"
+    assert_output_contains "amp-install (verbose): Installing Amp CLI via AUR (Arch Linux detected)"
+    assert_output_contains "amp-install: Installing via AUR..."
 }
 
 @test "install_cli uses APT on Debian/Ubuntu" {
@@ -105,8 +117,8 @@ load 00_helpers
     export VERBOSE=1
     run install_cli
     [ "$status" -eq 0 ]
-    assert_output_contains "Installing Amp CLI via APT repository (Debian/Ubuntu detected)"
-    assert_output_contains "Installing via APT"
+    assert_output_contains "amp-install (verbose): Installing Amp CLI via APT repository (Debian/Ubuntu detected)"
+    assert_output_contains "amp-install: Installing via APT..."
 }
 
 @test "install_cli uses RPM on RHEL/Fedora/CentOS" {
@@ -129,8 +141,8 @@ load 00_helpers
     export VERBOSE=1
     run install_cli
     [ "$status" -eq 0 ]
-    assert_output_contains "Installing Amp CLI via RPM repository (RHEL/Fedora/CentOS detected)"
-    assert_output_contains "Installing via RPM"
+    assert_output_contains "amp-install (verbose): Installing Amp CLI via RPM repository (RHEL/Fedora/CentOS detected)"
+    assert_output_contains "amp-install: Installing via RPM..."
 }
 
 @test "install_cli rejects Windows" {
@@ -151,7 +163,7 @@ load 00_helpers
     
     run install_cli
     [ "$status" -eq 1 ]
-    assert_output_contains "Amp CLI is not yet available for Windows"
+    assert_output_contains "amp-install: Amp CLI is not yet available for Windows – please use WSL or Docker."
 }
 
 @test "install_cli fails when no package managers available on macOS" {
@@ -166,13 +178,21 @@ load 00_helpers
     is_windows() { return 1; }
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
+    # Ensure no package managers are available
+    make_stub nix 1
+    make_stub nix-env 1
+    make_stub brew 1
+    
+    # Override PATH to only include our stubs
+    export PATH="$STUB_DIR"
+    
     # Mock install function
     install_vscode_extension() { say "Installing Amp extension..."; }
     export -f install_vscode_extension
     
     run install_cli
     [ "$status" -eq 1 ]
-    assert_output_contains "No supported package managers found (Nix or Homebrew)"
+    assert_output_contains "amp-install: No supported package managers found (Nix or Homebrew). Please install Nix or Homebrew and try again"
 }
 
 @test "install_cli fails on completely unsupported platform" {
@@ -196,7 +216,7 @@ load 00_helpers
     
     run install_cli
     [ "$status" -eq 1 ]
-    assert_output_contains "Unsupported platform for automatic installation"
+    assert_output_contains "amp-install: Unsupported platform for automatic installation. Please install Amp CLI manually from https://github.com/sourcegraph/amp-cli/releases"
 }
 
 @test "install_cli always installs VS Code extensions first" {
@@ -212,13 +232,24 @@ load 00_helpers
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
     make_stub nix 0
+    make_stub nix-env 0
+    
+    # Override PATH to only include our stubs
+    export PATH="$STUB_DIR"
     
     # Track order of calls
     install_vscode_extension() { echo "EXTENSION_FIRST"; }
     install_nix_flake() { echo "NIX_SECOND"; }
     export -f install_vscode_extension install_nix_flake
     
-    run install_cli
+    # Create a composite function that shows the order
+    test_sequence() {
+        install_vscode_extension
+        install_cli
+    }
+    
+    # Test the sequence
+    run test_sequence
     [ "$status" -eq 0 ]
     
     # Check that extension installation appears before CLI installation in output

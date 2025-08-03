@@ -513,7 +513,7 @@ get_architecture() {
             # See: <https://support.apple.com/en-us/HT208436>
 
             # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
-            if sysctl hw.optional.x86_64 2>/dev/null || true | grep -q ': 1'; then
+            if sysctl hw.optional.x86_64 2>/dev/null | grep -q ': 1'; then
                 _cputype=x86_64
             fi
         elif [ "$_cputype" = x86_64 ]; then
@@ -522,7 +522,7 @@ get_architecture() {
             # Rosetta 2 is built exclusively for x86-64 and cannot run i386 binaries.
 
             # Avoid `sysctl: unknown oid` stderr output and/or non-zero exit code.
-            if sysctl hw.optional.arm64 2>/dev/null || true | grep -q ': 1'; then
+            if sysctl hw.optional.arm64 2>/dev/null | grep -q ': 1'; then
                 _cputype=arm64
             fi
         fi
@@ -947,8 +947,15 @@ update_vscode_extension() {
         _updated_count=$((_updated_count + 1))
     fi
 
+    # Update for VSCodium
+    if has_vscodium; then
+        verbose "Updating Amp extension for VSCodium..."
+        run_cmd codium --install-extension "$_extension_id" --force
+        _updated_count=$((_updated_count + 1))
+    fi
+
     if [ "$_updated_count" -eq 0 ]; then
-        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, or Cursor)"
+        say "No supported editors found (VS Code, VS Code Insiders, Windsurf, Cursor, or VSCodium)"
     else
         say "Amp extension updated for $_updated_count editor(s)"
     fi

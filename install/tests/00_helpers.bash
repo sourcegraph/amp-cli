@@ -84,6 +84,55 @@ teardown_stubs() {
     fi
 }
 
+# Clean all editor stubs for test isolation
+clean_editor_stubs() {
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
+}
+
+# Clean all system command stubs for tests that need commands to appear missing
+clean_system_command_stubs() {
+    rm -f "$STUB_DIR/curl" "$STUB_DIR/wget" "$STUB_DIR/mktemp" "$STUB_DIR/chmod"
+    rm -f "$STUB_DIR/mkdir" "$STUB_DIR/rm" "$STUB_DIR/rmdir"
+}
+
+# Isolate PATH to only include stub directory
+isolate_path() {
+    export PATH="$STUB_DIR"
+}
+
+# Restore PATH to include original commands plus stubs
+restore_path() {
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
+}
+
+# Create a functional grep stub that actually searches
+make_grep_stub() {
+    cat > "$STUB_DIR/grep" << 'EOF'
+#!/bin/sh
+# Simple grep implementation for tests
+case "$1" in
+    "-q")
+        pattern="$2"
+        while IFS= read -r line; do
+            case "$line" in
+                *"$pattern"*) exit 0 ;;
+            esac
+        done
+        exit 1
+        ;;
+    *)
+        pattern="$1"
+        while IFS= read -r line; do
+            case "$line" in
+                *"$pattern"*) echo "$line" ;;
+            esac
+        done
+        ;;
+esac
+EOF
+    /bin/chmod +x "$STUB_DIR/grep"
+}
+
 # Mock system utilities for consistent testing
 mock_uname() {
     local os="${1:-Linux}"
@@ -166,9 +215,12 @@ setup() {
     setup_stubs
     load_install_script
     
-    # Don't isolate PATH completely - we need real commands for test infrastructure
-    # Just prepend our stub directory so our stubs take precedence
-    export PATH="$STUB_DIR:$ORIGINAL_PATH"
+    # Store original PATH and use a minimal PATH for tests
+    export ORIGINAL_PATH="$PATH"
+    
+    # Use a minimal PATH with only essential system directories and our stub directory
+    # This ensures we don't accidentally pick up user-installed editors
+    export PATH="$STUB_DIR:/usr/bin:/bin:/usr/sbin:/sbin"
     
     # Default to dry-run mode for safety
     export AMP_DRY_RUN=1

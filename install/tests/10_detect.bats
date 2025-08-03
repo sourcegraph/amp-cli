@@ -22,9 +22,11 @@ load 00_helpers
 }
 
 @test "has_homebrew fails when brew absent" {
-    # Don't create brew stub - should fail
+    # Isolate PATH to ensure brew is not found
+    isolate_path
     run has_homebrew
     [ "$status" -eq 1 ]
+    restore_path
 }
 
 @test "has_nix detects nix command" {
@@ -40,8 +42,11 @@ load 00_helpers
 }
 
 @test "has_nix fails when neither nix nor nix-env present" {
+    # Isolate PATH to ensure nix and nix-env are not found
+    isolate_path
     run has_nix
     [ "$status" -eq 1 ]
+    restore_path
 }
 
 @test "has_npm detects npm when present" {
@@ -113,8 +118,11 @@ load 00_helpers
 }
 
 @test "is_homebrew_tapped fails when homebrew not available" {
+    # Isolate PATH to ensure brew is not found
+    isolate_path
     run is_homebrew_tapped
     [ "$status" -eq 1 ]
+    restore_path
 }
 
 # Tests for OS detection functions

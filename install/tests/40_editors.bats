@@ -5,9 +5,8 @@ load 00_helpers
 # Tests for VS Code extension installation
 
 @test "install_vscode_extension handles no editors found" {
-    # Mock all editor commands to be unavailable by creating empty stub dir
-    teardown_stubs
-    setup_stubs  # Reset to clean state with no commands
+    # Remove any existing editor stubs to ensure no editors are found
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
     
     run install_vscode_extension
     [ "$status" -eq 0 ]
@@ -16,6 +15,8 @@ load 00_helpers
 }
 
 @test "install_vscode_extension installs for VS Code" {
+    # Remove any existing editor stubs and only create the one we want
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
     make_stub code 0
     
     export VERBOSE=1
@@ -27,6 +28,9 @@ load 00_helpers
 }
 
 @test "install_vscode_extension installs for VS Code Insiders" {
+    # Clean stub directory and only create the one we want
+    rm -rf "$STUB_DIR"
+    mkdir -p "$STUB_DIR"
     make_stub code-insiders 0
     
     export VERBOSE=1
@@ -67,6 +71,9 @@ load 00_helpers
 }
 
 @test "install_vscode_extension installs for multiple editors" {
+    # Completely clean the stub directory and only create the ones we want
+    rm -rf "$STUB_DIR"
+    mkdir -p "$STUB_DIR"
     make_stub code 0
     make_stub windsurf 0
     make_stub cursor 0
@@ -81,6 +88,9 @@ load 00_helpers
 }
 
 @test "update_vscode_extension handles no editors found" {
+    # Remove any existing editor stubs to ensure no editors are found
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
+    
     run update_vscode_extension
     [ "$status" -eq 0 ]
     assert_output_contains "Updating Amp extension for available editors"
@@ -88,6 +98,8 @@ load 00_helpers
 }
 
 @test "update_vscode_extension updates for VS Code" {
+    # Remove any existing editor stubs and only create the one we want
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
     make_stub code 0
     
     export VERBOSE=1
@@ -99,6 +111,8 @@ load 00_helpers
 }
 
 @test "update_vscode_extension updates for multiple editors" {
+    # Remove any existing editor stubs and only create the ones we want
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
     make_stub code 0
     make_stub code-insiders 0
     make_stub windsurf 0
@@ -115,6 +129,8 @@ load 00_helpers
 }
 
 @test "editor detection functions work correctly" {
+    # Remove any existing editor stubs and create fresh ones
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
     make_stub code 0
     make_stub code-insiders 0
     make_stub windsurf 0
@@ -138,6 +154,9 @@ load 00_helpers
 }
 
 @test "editor detection functions fail when editors not available" {
+    # Remove any existing editor stubs to ensure no editors are found
+    rm -f "$STUB_DIR/code" "$STUB_DIR/code-insiders" "$STUB_DIR/windsurf" "$STUB_DIR/cursor" "$STUB_DIR/codium"
+    
     run has_vscode
     [ "$status" -eq 1 ]
     

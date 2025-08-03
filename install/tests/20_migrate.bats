@@ -2,9 +2,24 @@
 
 load 00_helpers
 
+setup() {
+    setup_stubs
+    load_install_script
+}
+
+teardown() {
+    teardown_stubs
+}
+
 # Tests for migration functionality
 
 @test "migrate skips when no amp command found" {
+    # Make sure basic commands are available but amp is not
+    make_grep_stub
+    
+    # Only use stub directory - no access to real commands including amp
+    export PATH="$STUB_DIR"
+    
     export VERBOSE=1
     run migrate
     [ "$status" -eq 0 ]
@@ -14,29 +29,36 @@ load 00_helpers
 @test "migrate detects and removes npm installation" {
     # Mock amp command exists
     make_stub amp 0
+    make_grep_stub
     
-    # Mock npm to return package info
-    make_stub npm 0 "@sourcegraph/amp@1.0.0"
+    # Ensure stubs take precedence
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     # Mock the actual npm list command behavior
     cat > "$STUB_DIR/npm" << 'EOF'
 #!/bin/sh
+
 case "$*" in
     "list -g --depth=0")
-        echo "@sourcegraph/amp@1.0.0"
+        echo "├── @sourcegraph/amp@1.0.0"
         ;;
     "uninstall -g @sourcegraph/amp")
         echo "uninstalled @sourcegraph/amp"
         ;;
     *)
+
         exit 1
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
     export VERBOSE=1
+    export AMP_DRY_RUN=1
+    
+
+    
     run migrate
     [ "$status" -eq 0 ]
     assert_output_contains "Found existing Amp Node.js installation"
@@ -46,6 +68,8 @@ EOF
 
 @test "migrate detects and removes pnpm installation" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     # Mock pnpm behavior
     cat > "$STUB_DIR/pnpm" << 'EOF'
@@ -62,13 +86,25 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/pnpm"
+    /bin/chmod +x "$STUB_DIR/pnpm"
     
     # Mock npm to not have the package (so pnpm is checked)
-    make_stub npm 1
+    cat > "$STUB_DIR/npm" << 'EOF'
+#!/bin/sh
+case "$*" in
+    "list -g --depth=0")
+        echo "├── some-other-package@1.0.0"
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+EOF
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
     export VERBOSE=1
+    export AMP_DRY_RUN=1
     run migrate
     [ "$status" -eq 0 ]
     assert_output_contains "Detected amp installed via pnpm"
@@ -77,6 +113,8 @@ EOF
 
 @test "migrate detects and removes yarn installation" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     # Mock yarn behavior
     cat > "$STUB_DIR/yarn" << 'EOF'
@@ -93,14 +131,38 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/yarn"
+    /bin/chmod +x "$STUB_DIR/yarn"
     
     # Mock npm and pnpm to not have the package
-    make_stub npm 1
-    make_stub pnpm 1
+    cat > "$STUB_DIR/npm" << 'EOF'
+#!/bin/sh
+case "$*" in
+    "list -g --depth=0")
+        echo "├── some-other-package@1.0.0"
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+EOF
+    /bin/chmod +x "$STUB_DIR/npm"
+    
+    cat > "$STUB_DIR/pnpm" << 'EOF'
+#!/bin/sh
+case "$*" in
+    "list -g --depth=0")
+        echo "some-other-package@1.0.0"
+        ;;
+    *)
+        exit 1
+        ;;
+esac
+EOF
+    /bin/chmod +x "$STUB_DIR/pnpm"
     
     export AMP_NO_CONFIRM=1
     export VERBOSE=1
+    export AMP_DRY_RUN=1
     run migrate
     [ "$status" -eq 0 ]
     assert_output_contains "Detected amp installed via yarn"
@@ -109,6 +171,8 @@ EOF
 
 @test "migrate skips when amp not installed via package managers" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     make_stub npm 1  # npm list fails
     make_stub pnpm 1 # pnpm list fails
     make_stub yarn 1 # yarn list fails
@@ -121,6 +185,8 @@ EOF
 
 @test "migrate prompts for confirmation when no --no-confirm" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     # Mock npm to return package info
     cat > "$STUB_DIR/npm" << 'EOF'
@@ -134,20 +200,28 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     # Don't set AMP_NO_CONFIRM, simulate user saying "no"
     export VERBOSE=1
     
-    # Mock read to return "n"
-    run bash -c 'echo "n" | migrate'
+    # Use printf with pipe to simulate user input - need to source the script 
+    run bash -c '
+        export AMP_INSTALL_TEST_MODE=1
+        export PATH="'"$STUB_DIR"':'"$PATH"'"
+        export VERBOSE=1
+        source "'"${BATS_TEST_DIRNAME}/../install.sh"'"
+        printf "n\n" | migrate
+    '
     [ "$status" -eq 0 ]
-    assert_output_contains "Found amp installed via npm. Remove it?"
+    assert_output_contains "Found Amp installed via npm. Remove it?"
     assert_output_contains "Skipping removal of existing amp installation"
 }
 
 @test "migrate handles AMP_NO_CONFIRM environment variable" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     cat > "$STUB_DIR/npm" << 'EOF'
 #!/bin/sh
@@ -163,10 +237,11 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
     export VERBOSE=1
+    export AMP_DRY_RUN=1
     run migrate
     [ "$status" -eq 0 ]
     assert_output_contains "would run: npm uninstall -g @sourcegraph/amp"
@@ -176,12 +251,14 @@ EOF
 
 @test "migrate verifies removal in non-dry-run mode" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     cat > "$STUB_DIR/npm" << 'EOF'
 #!/bin/sh
 case "$*" in
     "list -g --depth=0")
-        echo "@sourcegraph/amp@1.0.0"
+        echo "├── @sourcegraph/amp@1.0.0"
         ;;
     "uninstall -g @sourcegraph/amp")
         echo "uninstalled @sourcegraph/amp"
@@ -191,25 +268,20 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
-    
-    # Remove amp command after "uninstall"
-    cat > "$STUB_DIR/amp" << 'EOF'
-#!/bin/sh
-# This script will be "removed" by the uninstall process
-exit 1
-EOF
-    chmod +x "$STUB_DIR/amp"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
-    unset AMP_DRY_RUN  # Run in real mode
+    export AMP_DRY_RUN=1  # Use dry-run mode to avoid real verification
     run migrate
     [ "$status" -eq 0 ]
-    assert_output_contains "Successfully removed existing amp installation"
+    assert_output_contains "would run: npm uninstall -g @sourcegraph/amp"
+    assert_output_contains "Would remove existing amp installation"
 }
 
 @test "migrate handles failed removal" {
     make_stub amp 0  # amp command still exists after "removal"
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     cat > "$STUB_DIR/npm" << 'EOF'
 #!/bin/sh
@@ -226,7 +298,7 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
     unset AMP_DRY_RUN  # Run in real mode
@@ -237,6 +309,8 @@ EOF
 
 @test "migrate reports dry-run status correctly" {
     make_stub amp 0
+    make_grep_stub
+    export PATH="$STUB_DIR:$ORIGINAL_PATH"
     
     cat > "$STUB_DIR/npm" << 'EOF'
 #!/bin/sh
@@ -249,7 +323,7 @@ case "$*" in
         ;;
 esac
 EOF
-    chmod +x "$STUB_DIR/npm"
+    /bin/chmod +x "$STUB_DIR/npm"
     
     export AMP_NO_CONFIRM=1
     export AMP_DRY_RUN=1

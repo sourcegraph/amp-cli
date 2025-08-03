@@ -11,6 +11,12 @@ secure_gpg_sign() {
     local gpg_key_id="$3"
     local passphrase="$4"
 
+    # Validate all parameters are provided
+    if [ -z "${file_to_sign:-}" ] || [ -z "${output_file:-}" ] || [ -z "${gpg_key_id:-}" ] || [ -z "${passphrase:-}" ]; then
+        echo "ERROR: secure_gpg_sign requires 4 parameters: file_to_sign output_file gpg_key_id passphrase"
+        return 1
+    fi
+
     # Create secure temporary passphrase file
     local passphrase_file
     passphrase_file=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" gpg_passphrase.XXXXXX)

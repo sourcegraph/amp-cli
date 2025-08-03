@@ -1,8 +1,14 @@
 #!/bin/bash
 set -eo pipefail
 
+# Source security hardening functions
+source "$(dirname "$0")/security-hardening.sh"
+
 VERSION="$1"
 VERSION="${VERSION#v}"
+
+# Mask all secrets immediately
+mask_secrets
 
 echo "Building package repositories for version $VERSION"
 
@@ -61,19 +67,20 @@ if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
     # Use secure method that doesn't expose passphrase in command line
     if [ -n "${GPG_PASSPHRASE:-}" ]; then
         echo "Using provided GPG passphrase for key import"
-        # Create temporary passphrase file with secure permissions
-        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
-        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
+        # Create secure temporary passphrase file with random name
+        PASSPHRASE_FILE=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
         chmod 600 "$PASSPHRASE_FILE"
+        trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+        printf '%s' "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
 
         # Import using passphrase file
-        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --import 2>/dev/null
+        printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --import 2>/dev/null
 
         # Securely remove passphrase file
         rm -f "$PASSPHRASE_FILE"
     else
         echo "No GPG passphrase provided, assuming unprotected key"
-        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --import 2>/dev/null
+        printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --import 2>/dev/null
     fi
 
     echo "=== DEBUG: Listing available keys after import ==="

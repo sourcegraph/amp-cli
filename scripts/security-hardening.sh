@@ -114,7 +114,7 @@ setup_secure_ssh() {
     # Create SSH config with secure settings
     cat > ~/.ssh/config << EOF
 Host $host
-    StrictHostKeyChecking no
+    StrictHostKeyChecking yes
     LogLevel ERROR
     IdentityFile $key_file
     User $user

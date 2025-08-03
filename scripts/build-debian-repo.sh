@@ -120,7 +120,6 @@ if [ -n "$GPG_KEY_ID" ]; then
     echo "Creating InRelease signature..."
     if [ -n "${GPG_PASSPHRASE:-}" ]; then
         # Create secure temporary passphrase file
-        local passphrase_file
         passphrase_file=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
         chmod 600 "$passphrase_file"
         trap 'rm -f "$passphrase_file"' EXIT

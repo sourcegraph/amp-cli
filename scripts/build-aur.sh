@@ -92,7 +92,7 @@ setup_secure_ssh \
     "$AUR_SSH_PRIVATE_KEY" \
     "aur.archlinux.org" \
     "aur" \
-    "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jRsD26/Ux5kh6vqMfSiXz"
+    "aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN"
 
 if ssh -o BatchMode=yes -o ConnectTimeout=10 aur@aur.archlinux.org exit 2>/dev/null; then
     echo "SSH connection successful"

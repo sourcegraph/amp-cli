@@ -40,6 +40,9 @@ jobs:
           - os: ubuntu-latest
             package_manager: docker
             arch: arm64
+          # Arch Linux testing
+          - os: ubuntu-latest
+            package_manager: aur
           # Windows testing
           - os: windows-latest
             package_manager: chocolatey
@@ -328,6 +331,73 @@ jobs:
             amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
           "
 
+      - name: Test AUR Installation (Arch Linux Container)
+        id: test-aur
+        if: matrix.package_manager == 'aur'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Test AUR installation using Arch Linux container with yay and paru
+          echo "Testing AUR installation in Arch Linux container..."
+
+          docker run --rm archlinux:base-devel bash -c "
+            set -euo pipefail
+            # Update package database and install dependencies
+            echo '=== Updating package database ==='
+            pacman -Sy --noconfirm
+
+            echo '=== Installing dependencies ==='
+            pacman -S --noconfirm git base-devel sudo
+
+            # Create a non-root user for AUR operations (required for makepkg)
+            echo '=== Creating non-root user ==='
+            useradd -m -G wheel testuser
+            echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+            # Install yay (AUR helper)
+            echo '=== Installing yay ==='
+            su - testuser -c '
+              git clone https://aur.archlinux.org/yay.git /tmp/yay
+              cd /tmp/yay
+              makepkg -si --noconfirm
+            '
+
+            # Install paru (AUR helper)
+            echo '=== Installing paru ==='
+            su - testuser -c '
+              git clone https://aur.archlinux.org/paru.git /tmp/paru
+              cd /tmp/paru
+              makepkg -si --noconfirm
+            '
+
+            # Verify AUR helpers are installed
+            echo '=== Verifying AUR helpers ==='
+            which yay && yay --version
+            which paru && paru --version
+
+            # Test amp installation via AUR using yay
+            echo '=== Installing amp via yay ==='
+            su - testuser -c 'yay -S --noconfirm ampcode'
+
+            # Test that amp is working
+            echo '=== Testing amp installation ==='
+            which amp || echo 'amp not in PATH'
+            amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
+
+            # Test uninstallation
+            echo '=== Uninstalling amp ==='
+            su - testuser -c 'yay -R --noconfirm ampcode'
+
+            # Test amp installation via AUR using paru
+            echo '=== Installing amp via paru ==='
+            su - testuser -c 'paru -S --noconfirm ampcode'
+
+            # Test that amp is working again
+            echo '=== Testing amp installation via paru ==='
+            which amp || echo 'amp not in PATH'
+            amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
+          "
+
       - name: Check test results
         if: always()
         shell: bash
@@ -376,6 +446,13 @@ jobs:
             failed=1
           elif [[ "${{ steps.test-rpm.outcome }}" == "success" ]]; then
             echo "✅ RPM repository installation test passed"
+          fi
+
+          if [[ "${{ steps.test-aur.outcome }}" == "failure" ]]; then
+            echo "❌ AUR installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-aur.outcome }}" == "success" ]]; then
+            echo "✅ AUR installation test passed"
           fi
 
           if [[ $failed -eq 1 ]]; then

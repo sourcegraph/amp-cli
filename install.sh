@@ -742,6 +742,7 @@ install_aur() {
     fi
 }
 
+
 # Install via APT repository (Debian/Ubuntu)
 install_deb() {
     if ! is_debian && ! is_ubuntu; then
@@ -978,7 +979,7 @@ install_cli() {
 
 # Operating system detection functions
 is_archlinux() {
-    [ -f /etc/arch-release ] || [ -f /etc/archlinux-release ]
+    [ -f /etc/arch-release ] || [ -f /etc/archlinux-release ] || ([ -f /etc/os-release ] && grep -qi '^ID=arch' /etc/os-release)
 }
 
 is_nixos() {

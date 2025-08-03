@@ -33,8 +33,14 @@ jobs:
 
       - name: Setup GPG
         run: |
-          echo "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
-          echo "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+          # Mask secrets
+          echo "::add-mask::${{ secrets.DEB_GPG_PRIVATE_KEY }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_PUBLIC_KEY }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_PASSWORD }}"
+          
+          # Import GPG keys securely
+          printf '%s' "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          printf '%s' "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
         env:
           GPG_TTY: $(tty)
 
@@ -94,6 +100,11 @@ jobs:
 
       - name: Download and sign release binaries
         run: |
+          # Mask all secrets at start
+          echo "::add-mask::${{ secrets.DEB_GPG_PASSWORD }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_KEY_ID }}"
+          echo "::add-mask::${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}"
+          
           version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
 
           # Download all binary assets
@@ -102,10 +113,11 @@ jobs:
           # Sign all downloaded binaries (excluding .asc files)
           cd binaries
           
-          # Create secure temporary passphrase file
-          PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
-          echo "${{ secrets.DEB_GPG_PASSWORD }}" > "$PASSPHRASE_FILE"
+          # Create secure temporary passphrase file with random name
+          PASSPHRASE_FILE=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
           chmod 600 "$PASSPHRASE_FILE"
+          trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+          printf '%s' "${{ secrets.DEB_GPG_PASSWORD }}" > "$PASSPHRASE_FILE"
           
           for binary in amp-*; do
             if [ -f "$binary" ] && [[ "$binary" != *.asc ]]; then
@@ -116,7 +128,7 @@ jobs:
             fi
           done
 
-          # Clean up passphrase file
+          # Clean up passphrase file (trap will also handle this)
           rm -f "$PASSPHRASE_FILE"
 
           # Upload signature files to the release

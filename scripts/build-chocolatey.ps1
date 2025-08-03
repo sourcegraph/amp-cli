@@ -104,8 +104,8 @@ if ($env:GITHUB_TOKEN) {
 try {
     git checkout main
 } catch {
-    # Create main branch tracking origin/main
-    git checkout -b main origin/main
+    # Create main branch
+    git checkout -b main
 }
 
 # Retry logic for concurrent workflow conflicts
@@ -125,7 +125,7 @@ for ($i = 1; $i -le 5; $i++) {
         git commit -m "Update Chocolatey package to v$Version"
         # Try to push
         try {
-            git push origin main
+            git push --set-upstream origin main
             Write-Host "Successfully pushed changes on attempt $i"
             break
         } catch {

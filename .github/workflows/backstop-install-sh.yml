@@ -1,5 +1,5 @@
 ---
-name: Install Script Backstop
+name: Backstop - Install Script
 
 on:
   schedule:

@@ -297,7 +297,7 @@ jobs:
             set -eo pipefail
             # Install required tools
             echo '=== Installing required tools ==='
-            dnf install -y curl rpm file
+            dnf install -y curl rpm file which
 
             # Check if GPG key is available
             echo '=== Checking GPG key availability ==='
@@ -419,24 +419,20 @@ jobs:
             pacman -Sy --noconfirm
 
             echo '=== Installing dependencies ==='
-            pacman -S --noconfirm git base-devel sudo
+            pacman -S --noconfirm git base-devel sudo paru
 
             # Create a non-root user for AUR operations (required for makepkg)
             echo '=== Creating non-root user ==='
             useradd -m -G wheel testuser
             echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
-            # Install yay (AUR helper) using binary package
-            echo '=== Installing yay ==='
-            pacman -S --noconfirm yay
+            # Verify paru is installed
+            echo '=== Verifying paru installation ==='
+            which paru && paru --version
 
-            # Verify yay is installed
-            echo '=== Verifying yay installation ==='
-            which yay && yay --version
-
-            # Test amp installation via AUR using yay
-            echo '=== Installing amp via yay ==='
-            su - testuser -c 'yay -S --noconfirm ampcode'
+            # Test amp installation via AUR using paru
+            echo '=== Installing amp via paru ==='
+            su - testuser -c 'paru -S --noconfirm ampcode'
 
             # Test that amp is working
             echo '=== Testing amp installation ==='

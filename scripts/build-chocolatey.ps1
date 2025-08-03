@@ -31,8 +31,11 @@ Invoke-WebRequest -Uri $WindowsExeUrl -OutFile "amp-windows-x64.exe"
 $WindowsChecksum = (Get-FileHash -Path "amp-windows-x64.exe" -Algorithm SHA256).Hash.ToLower()
 Write-Host "Windows executable checksum: $WindowsChecksum"
 
+# Copy template and update values
+Copy-Item "chocolatey/tools/chocolateyinstall.ps1.template" "chocolatey/tools/chocolateyinstall.ps1" -Force
+
 # Update download URL in install script (use original version with SHA for actual download)
-(Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace 'v[0-9]+\.[0-9]+\.[0-9a-zA-Z\.\-]+', "v$Version" |
+(Get-Content chocolatey/tools/chocolateyinstall.ps1) -replace 'REPLACE_WITH_VERSION', "v$Version" |
     Set-Content chocolatey/tools/chocolateyinstall.ps1
 
 # Update checksum in install script
@@ -117,7 +120,7 @@ for ($i = 1; $i -le 5; $i++) {
     }
 
     # Add and commit changes
-    git add chocolatey/amp.nuspec
+    git add chocolatey/amp.nuspec chocolatey/tools/chocolateyinstall.ps1
     try {
         git commit -m "Update Chocolatey package to v$Version"
         # Try to push

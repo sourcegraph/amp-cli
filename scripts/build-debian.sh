@@ -61,6 +61,12 @@ sed -i "s/REPLACE_WITH_VERSION/${VERSION}/g" pkgroot/DEBIAN/control
 sed -i "s/REPLACE_WITH_ARCHITECTURE/$arch/g" pkgroot/DEBIAN/control
 sed -i "s/REPLACE_WITH_INSTALLED_SIZE/$size/g" pkgroot/DEBIAN/control
 
+# Also update the main debian/control file from template
+cp debian/control.template debian/control
+sed -i "s/REPLACE_WITH_VERSION/${VERSION}/g" debian/control
+sed -i "s/REPLACE_WITH_ARCHITECTURE/$arch/g" debian/control
+sed -i "s/REPLACE_WITH_INSTALLED_SIZE/$size/g" debian/control
+
 # Build package
 dpkg-deb --build pkgroot amp_${VERSION}-1_$arch.deb
 
@@ -77,5 +83,46 @@ gh release upload "$version_tag" amp_${VERSION}-1_$arch.deb amp_${VERSION}-1_$ar
 mkdir -p artifacts
 cp amp_${VERSION}-1_$arch.deb artifacts/
 cp amp_${VERSION}-1_$arch.deb.asc artifacts/
+
+# Configure git and commit changes
+git config --local user.email "amp@ampcode.com"
+git config --local user.name "Amp"
+
+# Configure git to use GitHub token if available
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/sourcegraph/amp-cli.git"
+fi
+
+# Ensure we're on the main branch (not detached HEAD)
+git checkout main || git checkout -b main origin/main
+
+# Retry logic for concurrent workflow conflicts
+for i in {1..5}; do
+    echo "Attempt $i/5 to commit and push changes"
+
+    # Pull latest changes
+    git pull origin main || true
+
+    # Add and commit changes
+    git add debian/changelog debian/control
+    if git commit -m "Update Debian package files to v$VERSION"; then
+        # Try to push
+        if git push origin main; then
+            echo "Successfully pushed changes on attempt $i"
+            break
+        else
+            echo "Push failed on attempt $i, retrying..."
+            sleep $((i * 2))
+        fi
+    else
+        echo "No changes to commit on attempt $i"
+        break
+    fi
+done
+
+if [ $i -gt 5 ]; then
+    echo "Failed to push after 5 attempts"
+    exit 1
+fi
 
 echo "Debian package built and uploaded successfully"

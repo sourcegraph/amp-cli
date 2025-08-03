@@ -101,6 +101,7 @@ name=Amp CLI Repository
 baseurl=https://packages.ampcode.com/rpm
 enabled=1
 gpgcheck=1
+repo_gpgcheck=1
 gpgkey=https://packages.ampcode.com/gpg/amp-cli.asc
 EOF
 

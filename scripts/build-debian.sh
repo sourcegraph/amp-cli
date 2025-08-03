@@ -71,9 +71,17 @@ sed -i "s/REPLACE_WITH_INSTALLED_SIZE/$size/g" debian/control
 dpkg-deb --build pkgroot amp_${VERSION}-1_$arch.deb
 
 # Sign the package
-gpg --batch --yes --pinentry-mode loopback --passphrase "$DEB_GPG_PASSWORD" \
+# Create secure temporary passphrase file
+PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
+echo "$DEB_GPG_PASSWORD" > "$PASSPHRASE_FILE"
+chmod 600 "$PASSPHRASE_FILE"
+
+gpg --batch --yes --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" \
     --default-key "$DEB_GPG_KEY_ID" \
     --armor --detach-sign amp_${VERSION}-1_$arch.deb
+
+# Clean up passphrase file
+rm -f "$PASSPHRASE_FILE"
 
 # Attach DEB to GitHub Release
 version_tag="v${VERSION}"

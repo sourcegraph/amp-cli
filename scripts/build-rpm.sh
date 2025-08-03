@@ -56,23 +56,57 @@ rpmbuild --target $arch -bb ~/rpmbuild/SPECS/amp.spec
 echo "Listing rpmbuild RPMS directory structure:"
 find ~/rpmbuild/RPMS -type f -name "*.rpm" || echo "No RPM files found"
 
-# Sign the RPM package
+# Configure RPM macros for internal signing
+echo "Configuring RPM macros for signing..."
+mkdir -p ~/.rpm
+cat > ~/.rpmmacros << EOF
+%_signature gpg
+%_gpg_name ${DEB_GPG_KEY_ID}
+%_gpg_path ${GNUPGHOME:-~/.gnupg}
+EOF
+
+# Configure GPG for non-interactive signing
+export GPG_TTY=""
+mkdir -p "${GNUPGHOME:-~/.gnupg}"
+echo 'allow-loopback-pinentry' > "${GNUPGHOME:-~/.gnupg}/gpg-agent.conf"
+
+# Install rpm-sign if not available
+if ! command -v rpmsign >/dev/null 2>&1; then
+    echo "Installing rpm-sign..."
+    sudo apt-get update && sudo apt-get install -y rpm-sign
+fi
+
+# Sign the RPM packages internally
+echo "Signing RPM packages with internal signatures..."
+
+# Create secure temporary passphrase file
+PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
+echo "$DEB_GPG_PASSWORD" > "$PASSPHRASE_FILE"
+chmod 600 "$PASSPHRASE_FILE"
+
+# Configure GPG agent to use the passphrase file
+export PINENTRY_USER_DATA="$PASSPHRASE_FILE"
+
 for rpm_file in ~/rpmbuild/RPMS/*/amp-*.rpm; do
     if [ -f "$rpm_file" ]; then
-        gpg --batch --yes --pinentry-mode loopback --passphrase "$DEB_GPG_PASSWORD" \
-            --default-key "$DEB_GPG_KEY_ID" \
-            --armor --detach-sign "$rpm_file"
+        echo "Signing RPM: $rpm_file"
+        # Use --define to pass passphrase securely
+        rpmsign --define "_gpg_name $DEB_GPG_KEY_ID" \
+                --define "__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor --no-secmem-warning -u \"%{_gpg_name}\" --passphrase-file \"$PASSPHRASE_FILE\" --pinentry-mode loopback -sbo %{__signature_filename} %{__plaintext_filename}" \
+                --addsign "$rpm_file"
     fi
 done
 
+# Clean up passphrase file
+rm -f "$PASSPHRASE_FILE"
+
 # Attach RPM to GitHub Release
 version_tag="v${VERSION}"
-gh release upload "$version_tag" ~/rpmbuild/RPMS/*/amp-*.rpm ~/rpmbuild/RPMS/*/amp-*.rpm.asc --clobber
+gh release upload "$version_tag" ~/rpmbuild/RPMS/*/amp-*.rpm --clobber
 
 # Upload artifacts for repository build
 mkdir -p artifacts
 cp ~/rpmbuild/RPMS/*/amp-*.rpm artifacts/
-cp ~/rpmbuild/RPMS/*/amp-*.rpm.asc artifacts/
 
 # Configure git and commit changes
 echo "=== GIT DEBUGGING STARTED (RPM) ==="

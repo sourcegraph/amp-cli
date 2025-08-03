@@ -101,14 +101,23 @@ jobs:
 
           # Sign all downloaded binaries (excluding .asc files)
           cd binaries
+          
+          # Create secure temporary passphrase file
+          PASSPHRASE_FILE="${GNUPGHOME:-~/.gnupg}/passphrase.tmp"
+          echo "${{ secrets.DEB_GPG_PASSWORD }}" > "$PASSPHRASE_FILE"
+          chmod 600 "$PASSPHRASE_FILE"
+          
           for binary in amp-*; do
             if [ -f "$binary" ] && [[ "$binary" != *.asc ]]; then
               echo "Signing binary: $binary"
-              gpg --batch --yes --pinentry-mode loopback --passphrase "${{ secrets.DEB_GPG_PASSWORD }}" \
+              gpg --batch --yes --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" \
                 --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
                 --armor --detach-sign "$binary"
             fi
           done
+
+          # Clean up passphrase file
+          rm -f "$PASSPHRASE_FILE"
 
           # Upload signature files to the release
           gh release upload "$version" *.asc --clobber

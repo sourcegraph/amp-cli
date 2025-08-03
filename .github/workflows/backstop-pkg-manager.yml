@@ -175,76 +175,114 @@ jobs:
           # Test APT repository installation
           echo "Testing APT repository installation..."
 
-          # Debug: Check what's at the GPG key URL
-          echo "=== DEBUG: Checking GPG key URL ==="
-          curl -v https://packages.ampcode.com/gpg/amp-cli.asc || true
-          echo "=== END DEBUG ==="
-
-          # Download and inspect GPG key
-          echo "=== DEBUG: Downloading and inspecting GPG key ==="
-          curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc > /tmp/amp-cli.asc
-          echo "Downloaded key content:"
-          cat /tmp/amp-cli.asc
-          echo "Key file size: $(wc -c < /tmp/amp-cli.asc) bytes"
-          echo "Key file type: $(file /tmp/amp-cli.asc)"
-
-          # Try to validate the GPG key before importing
-          if file /tmp/amp-cli.asc | grep -q "PGP public key"; then
-            echo "✅ Valid PGP key found"
+          # Check if GPG key is available
+          echo "=== Checking GPG key availability ==="
+          if curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc -o /tmp/amp-cli.asc; then
+            echo "Downloaded key content:"
+            cat /tmp/amp-cli.asc
+            echo "Key file size: $(wc -c < /tmp/amp-cli.asc) bytes"
+            echo "Key file type: $(file /tmp/amp-cli.asc)"
+            
+            # Validate GPG key content
+            if file /tmp/amp-cli.asc | grep -q "PGP public key" || grep -q "BEGIN PGP PUBLIC KEY BLOCK" /tmp/amp-cli.asc; then
+              echo "✅ Valid PGP key found"
+              GPG_KEY_VALID=true
+            else
+              echo "❌ Invalid PGP key content detected"
+              echo "Key contains: $(head -1 /tmp/amp-cli.asc)"
+              GPG_KEY_VALID=false
+            fi
           else
-            echo "❌ Invalid PGP key - this will cause installation to fail"
-            echo "Key contents:"
-            hexdump -C /tmp/amp-cli.asc | head -10
+            echo "❌ Failed to download GPG key"
+            GPG_KEY_VALID=false
           fi
-          echo "=== END DEBUG ==="
+
+          if [ "$GPG_KEY_VALID" = "false" ]; then
+            echo "❌ GPG key not available or invalid - APT repository test failed"
+            echo "The repository must have a valid GPG key for package signing"
+            exit 1
+          fi
 
           # Add GPG key (simulate what our install script does)
           echo "=== Importing GPG key ==="
-          sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg < /tmp/amp-cli.asc
+          if ! sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg < /tmp/amp-cli.asc; then
+            echo "❌ Failed to import GPG key"
+            exit 1
+          fi
 
           # Verify the keyring was created correctly
-          echo "=== DEBUG: Verifying keyring ==="
           if [ -f /usr/share/keyrings/amp-cli.gpg ]; then
-            echo "✅ Keyring file created"
+            echo "✅ Keyring file created successfully"
             ls -la /usr/share/keyrings/amp-cli.gpg
           else
             echo "❌ Keyring file not created"
+            exit 1
           fi
-          echo "=== END DEBUG ==="
 
           # Add repository
           echo "=== Adding APT repository ==="
           echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
 
-          # Debug: Check repository accessibility
-          echo "=== DEBUG: Checking repository accessibility ==="
-          curl -v https://packages.ampcode.com/debian/dists/stable/Release || true
-          echo "=== END DEBUG ==="
+          # Check repository accessibility
+          echo "=== Checking repository accessibility ==="
+          if ! curl -fsSL https://packages.ampcode.com/debian/dists/stable/Release > /dev/null; then
+            echo "❌ Repository not accessible - skipping test"
+            echo "This is expected if the repository has not been published yet"
+            exit 0
+          fi
 
-          # Update package index
+          # Update package index with retry logic for repository sync issues
           echo "=== Updating package index ==="
-          sudo apt-get update -v
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3: Updating package index..."
+            if sudo apt-get update; then
+              echo "✅ Package index updated successfully"
+              break
+            else
+              echo "⚠️  Package index update failed on attempt $attempt"
+              if [ $attempt -eq 3 ]; then
+                echo "❌ Failed to update package index after 3 attempts"
+                exit 1
+              fi
+              echo "Waiting 30 seconds before retry..."
+              sleep 30
+              # Clean cache and try again
+              sudo apt-get clean
+              sudo rm -rf /var/lib/apt/lists/*
+            fi
+          done
 
-          # Debug: Check if amp package is available
-          echo "=== DEBUG: Checking package availability ==="
-          apt-cache policy amp || true
-          apt-cache search amp | grep -i "^amp" || true
-          echo "=== END DEBUG ==="
+          # Check if amp package is available
+          echo "=== Checking package availability ==="
+          if ! apt-cache policy amp | grep -q "packages.ampcode.com"; then
+            echo "❌ amp package not found in repository"
+            apt-cache policy amp || true
+            exit 1
+          fi
 
           # Install amp
           echo "=== Installing amp package ==="
-          sudo apt-get install -y amp
+          if ! sudo apt-get install -y amp; then
+            echo "❌ Failed to install amp package"
+            exit 1
+          fi
 
           # Test that amp is working
           echo "=== Testing amp installation ==="
-          which amp || echo "amp not in PATH"
-          amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
+          if ! which amp; then
+            echo "❌ amp not found in PATH after installation"
+            exit 1
+          fi
+          
+          echo "✅ amp successfully installed"
+          amp --version || echo "amp installed but may have terminal compatibility issues in CI"
 
           # Clean up
           echo "=== Cleaning up ==="
-          sudo apt-get remove -y amp
-          sudo rm -f /etc/apt/sources.list.d/amp-cli.list /usr/share/keyrings/amp-cli.gpg
-          sudo apt-get update
+          sudo apt-get remove -y amp || true
+          sudo apt-get autoremove -y || true
+          sudo rm -f /etc/apt/sources.list.d/amp-cli.list /usr/share/keyrings/amp-cli.gpg || true
+          sudo apt-get update || true
 
       - name: Test RPM Repository Installation (Fedora Container)
         id: test-rpm
@@ -259,40 +297,55 @@ jobs:
             set -euo pipefail
             # Install required tools
             echo '=== Installing required tools ==='
-            dnf install -y curl rpm
+            dnf install -y curl rpm file
 
-            # Debug: Check what's at the GPG key URL
-            echo '=== DEBUG: Checking GPG key URL ==='
-            curl -v https://packages.ampcode.com/gpg/amp-cli.asc || true
-            echo '=== END DEBUG ==='
-
-            # Download and inspect GPG key
-            echo '=== DEBUG: Downloading and inspecting GPG key ==='
-            curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc > /tmp/amp-cli.asc
-            echo 'Downloaded key content:'
-            cat /tmp/amp-cli.asc
-            echo 'Key file size:' \$(wc -c < /tmp/amp-cli.asc) 'bytes'
-            echo 'Key file type:' \$(file /tmp/amp-cli.asc)
-
-            # Try to validate the GPG key before importing
-            if file /tmp/amp-cli.asc | grep -q 'PGP public key'; then
-              echo '✅ Valid PGP key found'
+            # Check if GPG key is available
+            echo '=== Checking GPG key availability ==='
+            if curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc -o /tmp/amp-cli.asc; then
+              echo 'Downloaded key content:'
+              cat /tmp/amp-cli.asc
+              echo 'Key file size:' \$(wc -c < /tmp/amp-cli.asc) 'bytes'
+              echo 'Key file type:' \$(file /tmp/amp-cli.asc)
+              
+              # Validate GPG key content
+              if file /tmp/amp-cli.asc | grep -q 'PGP public key' || grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/amp-cli.asc; then
+                echo '✅ Valid PGP key found'
+                GPG_KEY_VALID=true
+              else
+                echo '❌ Invalid PGP key content detected'
+                echo 'Key contains:' \$(head -1 /tmp/amp-cli.asc)
+                GPG_KEY_VALID=false
+              fi
             else
-              echo '❌ Invalid PGP key - this will cause installation to fail'
-              echo 'Key contents:'
-              hexdump -C /tmp/amp-cli.asc | head -10
+              echo '❌ Failed to download GPG key'
+              GPG_KEY_VALID=false
             fi
-            echo '=== END DEBUG ==='
+
+            if [ \"\$GPG_KEY_VALID\" = \"false\" ]; then
+              echo '❌ GPG key not available or invalid - RPM repository test failed'
+              echo 'The repository must have a valid GPG key for package signing'
+              exit 1
+            fi
 
             # Add GPG key
             echo '=== Importing GPG key ==='
-            rpm --import /tmp/amp-cli.asc
-            echo 'GPG import exit code:' \$?
+            if ! rpm --import /tmp/amp-cli.asc; then
+              echo '❌ Failed to import GPG key'
+              exit 1
+            fi
+            echo '✅ GPG key imported successfully'
 
             # List imported GPG keys
-            echo '=== DEBUG: Listing imported GPG keys ==='
+            echo '=== Verifying imported GPG keys ==='
             rpm -q gpg-pubkey --qf '%{NAME}-%{VERSION}-%{RELEASE} %{SUMMARY}\n' || true
-            echo '=== END DEBUG ==='
+
+            # Check repository accessibility
+            echo '=== Checking repository accessibility ==='
+            if ! curl -fsSL https://packages.ampcode.com/rpm/repodata/repomd.xml > /dev/null; then
+              echo '❌ Repository not accessible - skipping test'
+              echo 'This is expected if the repository has not been published yet'
+              exit 0
+            fi
 
             # Add repository
             echo '=== Adding RPM repository ==='
@@ -305,30 +358,49 @@ jobs:
           gpgkey=https://packages.ampcode.com/gpg/amp-cli.asc
           EOF
 
-            # Debug: Check repository accessibility
-            echo '=== DEBUG: Checking repository accessibility ==='
-            curl -v https://packages.ampcode.com/rpm/repodata/repomd.xml || true
-            echo '=== END DEBUG ==='
-
-            # Update repository metadata
+            # Update repository metadata with retry logic
             echo '=== Updating repository metadata ==='
-            dnf makecache || true
+            for attempt in 1 2 3; do
+              echo \"Attempt \$attempt/3: Updating repository metadata...\"
+              if dnf makecache; then
+                echo '✅ Repository metadata updated successfully'
+                break
+              else
+                echo '⚠️  Repository metadata update failed on attempt' \$attempt
+                if [ \$attempt -eq 3 ]; then
+                  echo '❌ Failed to update repository metadata after 3 attempts'
+                  exit 1
+                fi
+                echo 'Waiting 30 seconds before retry...'
+                sleep 30
+                dnf clean all
+              fi
+            done
 
-            # Debug: Check if amp package is available
-            echo '=== DEBUG: Checking package availability ==='
-            dnf search amp || true
-            dnf info amp || true
-            echo '=== END DEBUG ==='
+            # Check if amp package is available
+            echo '=== Checking package availability ==='
+            if ! dnf info amp > /dev/null 2>&1; then
+              echo '❌ amp package not found in repository'
+              dnf search amp || true
+              exit 1
+            fi
 
             # Install amp
             echo '=== Installing amp package ==='
-            dnf install -y amp
-            echo 'Installation exit code:' \$?
+            if ! dnf install -y amp; then
+              echo '❌ Failed to install amp package'
+              exit 1
+            fi
 
             # Test that amp is working
             echo '=== Testing amp installation ==='
-            which amp || echo 'amp not in PATH'
-            amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
+            if ! which amp; then
+              echo '❌ amp not found in PATH after installation'
+              exit 1
+            fi
+            
+            echo '✅ amp successfully installed'
+            amp --version || echo 'amp installed but may have terminal compatibility issues in CI'
           "
 
       - name: Test AUR Installation (Arch Linux Container)

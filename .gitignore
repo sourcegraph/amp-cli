@@ -26,6 +26,7 @@ result-*
 *.zip
 *.rpm
 *.deb
+pkgroot
 
 # GPG signing artifacts
 *.asc

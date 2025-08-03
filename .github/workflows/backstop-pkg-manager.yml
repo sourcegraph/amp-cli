@@ -155,7 +155,7 @@ jobs:
 
           # Install amp via Nix flake
           echo "Installing amp via Nix flake..."
-          NIXPKGS_ALLOW_UNFREE=1 nix --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli
+          NIXPKGS_ALLOW_UNFREE=1 nix --access-tokens github.com=$GITHUB_TOKEN --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli
 
           # Test that amp is working
           amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"

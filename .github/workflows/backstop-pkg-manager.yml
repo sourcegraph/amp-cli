@@ -166,22 +166,73 @@ jobs:
           # Test APT repository installation
           echo "Testing APT repository installation..."
           
+          # Debug: Check what's at the GPG key URL
+          echo "=== DEBUG: Checking GPG key URL ==="
+          curl -v https://packages.ampcode.com/gpg/amp-cli.asc || true
+          echo "=== END DEBUG ==="
+          
+          # Download and inspect GPG key
+          echo "=== DEBUG: Downloading and inspecting GPG key ==="
+          curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc > /tmp/amp-cli.asc
+          echo "Downloaded key content:"
+          cat /tmp/amp-cli.asc
+          echo "Key file size: $(wc -c < /tmp/amp-cli.asc) bytes"
+          echo "Key file type: $(file /tmp/amp-cli.asc)"
+          
+          # Try to validate the GPG key before importing
+          if file /tmp/amp-cli.asc | grep -q "PGP public key"; then
+            echo "✅ Valid PGP key found"
+          else
+            echo "❌ Invalid PGP key - this will cause installation to fail"
+            echo "Key contents:"
+            hexdump -C /tmp/amp-cli.asc | head -10
+          fi
+          echo "=== END DEBUG ==="
+          
           # Add GPG key (simulate what our install script does)
-          curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc | sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg
+          echo "=== Importing GPG key ==="
+          sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg < /tmp/amp-cli.asc
+          
+          # Verify the keyring was created correctly
+          echo "=== DEBUG: Verifying keyring ==="
+          if [ -f /usr/share/keyrings/amp-cli.gpg ]; then
+            echo "✅ Keyring file created"
+            ls -la /usr/share/keyrings/amp-cli.gpg
+          else
+            echo "❌ Keyring file not created"
+          fi
+          echo "=== END DEBUG ==="
           
           # Add repository
+          echo "=== Adding APT repository ==="
           echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
           
+          # Debug: Check repository accessibility
+          echo "=== DEBUG: Checking repository accessibility ==="
+          curl -v https://packages.ampcode.com/debian/dists/stable/Release || true
+          echo "=== END DEBUG ==="
+          
           # Update package index
-          sudo apt-get update
+          echo "=== Updating package index ==="
+          sudo apt-get update -v
+          
+          # Debug: Check if amp package is available
+          echo "=== DEBUG: Checking package availability ==="
+          apt-cache policy amp || true
+          apt-cache search amp | grep -i "^amp" || true
+          echo "=== END DEBUG ==="
           
           # Install amp
+          echo "=== Installing amp package ==="
           sudo apt-get install -y amp
           
           # Test that amp is working
+          echo "=== Testing amp installation ==="
+          which amp || echo "amp not in PATH"
           amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
           
           # Clean up
+          echo "=== Cleaning up ==="
           sudo apt-get remove -y amp
           sudo rm -f /etc/apt/sources.list.d/amp-cli.list /usr/share/keyrings/amp-cli.gpg
           sudo apt-get update
@@ -196,12 +247,44 @@ jobs:
           
           docker run --rm fedora:latest bash -c "
             # Install required tools
+            echo '=== Installing required tools ==='
             dnf install -y curl rpm
             
+            # Debug: Check what's at the GPG key URL
+            echo '=== DEBUG: Checking GPG key URL ==='
+            curl -v https://packages.ampcode.com/gpg/amp-cli.asc || true
+            echo '=== END DEBUG ==='
+            
+            # Download and inspect GPG key
+            echo '=== DEBUG: Downloading and inspecting GPG key ==='
+            curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc > /tmp/amp-cli.asc
+            echo 'Downloaded key content:'
+            cat /tmp/amp-cli.asc
+            echo 'Key file size:' \$(wc -c < /tmp/amp-cli.asc) 'bytes'
+            echo 'Key file type:' \$(file /tmp/amp-cli.asc)
+            
+            # Try to validate the GPG key before importing
+            if file /tmp/amp-cli.asc | grep -q 'PGP public key'; then
+              echo '✅ Valid PGP key found'
+            else
+              echo '❌ Invalid PGP key - this will cause installation to fail'
+              echo 'Key contents:'
+              hexdump -C /tmp/amp-cli.asc | head -10
+            fi
+            echo '=== END DEBUG ==='
+            
             # Add GPG key
-            rpm --import https://packages.ampcode.com/gpg/amp-cli.asc
+            echo '=== Importing GPG key ==='
+            rpm --import /tmp/amp-cli.asc
+            echo 'GPG import exit code:' \$?
+            
+            # List imported GPG keys
+            echo '=== DEBUG: Listing imported GPG keys ==='
+            rpm -q gpg-pubkey --qf '%{NAME}-%{VERSION}-%{RELEASE} %{SUMMARY}\n' || true
+            echo '=== END DEBUG ==='
             
             # Add repository
+            echo '=== Adding RPM repository ==='
             cat > /etc/yum.repos.d/amp-cli.repo << EOF
           [amp-cli]
           name=Amp CLI Repository
@@ -211,10 +294,29 @@ jobs:
           gpgkey=https://packages.ampcode.com/gpg/amp-cli.asc
           EOF
             
+            # Debug: Check repository accessibility
+            echo '=== DEBUG: Checking repository accessibility ==='
+            curl -v https://packages.ampcode.com/rpm/repodata/repomd.xml || true
+            echo '=== END DEBUG ==='
+            
+            # Update repository metadata
+            echo '=== Updating repository metadata ==='
+            dnf makecache || true
+            
+            # Debug: Check if amp package is available
+            echo '=== DEBUG: Checking package availability ==='
+            dnf search amp || true
+            dnf info amp || true
+            echo '=== END DEBUG ==='
+            
             # Install amp
+            echo '=== Installing amp package ==='
             dnf install -y amp
+            echo 'Installation exit code:' \$?
             
             # Test that amp is working
+            echo '=== Testing amp installation ==='
+            which amp || echo 'amp not in PATH'
             amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
           "
 

@@ -121,7 +121,7 @@ for ($i = 1; $i -le 5; $i++) {
         git commit -m "Update Chocolatey package to v$Version"
         # Try to push
         try {
-            git push
+            git push --set-upstream origin main
             Write-Host "Successfully pushed changes on attempt $i"
             break
         } catch {

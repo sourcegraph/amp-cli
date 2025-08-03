@@ -21,6 +21,8 @@ _ext=""
 
 # If AMP_BINARY_ROOT is unset or empty, default it.
 AMP_BINARY_ROOT="${AMP_BINARY_ROOT:-https://packages.ampcode.com/}"
+# Normalize AMP_BINARY_ROOT by removing any trailing slashes
+AMP_BINARY_ROOT="${AMP_BINARY_ROOT%/}"
 
 # Store script arguments for dry-run detection
 SCRIPT_ARGS="$*"
@@ -382,7 +384,7 @@ doctor() {
     # Network connectivity test
     echo "Network Connectivity:"
     if command -v curl >/dev/null 2>&1; then
-        if curl -s --connect-timeout 5 "$AMP_BINARY_ROOT/" >/dev/null 2>&1; then
+        if curl -s --connect-timeout 5 "${AMP_BINARY_ROOT}/" >/dev/null 2>&1; then
             echo "  Binary root accessible: ✓ ($AMP_BINARY_ROOT)"
         else
             echo "  Binary root accessible: ✗ ($AMP_BINARY_ROOT)"
@@ -535,8 +537,12 @@ get_architecture() {
         _ostype=darwin
         ;;
 
+    CYGWIN*|MINGW*|MSYS*)
+        _ostype=windows
+        ;;
+
     *)
-        err "unrecognized OS type: $_ostype"
+        _ostype=unknown
         ;;
 
     esac
@@ -551,7 +557,7 @@ get_architecture() {
         ;;
 
     *)
-        err "unknown CPU type: $_cputype"
+        _cputype=unknown
         ;;
 
     esac
@@ -759,8 +765,13 @@ install_deb() {
     say "Installing Amp via APT repository..."
 
     # Download and install GPG key
-    verbose "Downloading GPG key from $AMP_BINARY_ROOT/gpg/amp-cli.asc"
-    run_cmd curl -fsSL "$AMP_BINARY_ROOT/gpg/amp-cli.asc" -o /tmp/amp-cli.asc
+    verbose "Downloading GPG key from ${AMP_BINARY_ROOT}/gpg/amp-cli.asc"
+    run_cmd curl -fsSL "${AMP_BINARY_ROOT}/gpg/amp-cli.asc" -o /tmp/amp-cli.asc
+    
+    # Check if download was successful
+    if [ ! -s /tmp/amp-cli.asc ]; then
+        err "Failed to download GPG key from ${AMP_BINARY_ROOT}/gpg/amp-cli.asc"
+    fi
 
     verbose "Installing GPG key to $_gpg_keyring"
     run_cmd sudo gpg --dearmor --yes --output "$_gpg_keyring" /tmp/amp-cli.asc
@@ -768,7 +779,7 @@ install_deb() {
 
     # Add repository to sources list
     verbose "Adding repository to $_sources_list"
-    echo "deb [signed-by=$_gpg_keyring] ${AMP_BINARY_ROOT%/}/debian stable main" | run_cmd sudo tee "$_sources_list" > /dev/null
+    echo "deb [signed-by=$_gpg_keyring] ${AMP_BINARY_ROOT}/debian stable main" | run_cmd sudo tee "$_sources_list" > /dev/null
 
     # Update package index
     say "Updating package index..."
@@ -803,15 +814,15 @@ install_rpm() {
     cat <<EOF | run_cmd sudo tee "$_repo_file" > /dev/null
 [amp-cli]
 name=Amp CLI Repository
-baseurl=$AMP_BINARY_ROOT/rpm
+baseurl=${AMP_BINARY_ROOT}/rpm
 enabled=1
 gpgcheck=1
-gpgkey=$AMP_BINARY_ROOT/gpg/amp-cli.asc
+gpgkey=${AMP_BINARY_ROOT}/gpg/amp-cli.asc
 EOF
 
     # Import GPG key
     say "Importing GPG key..."
-    run_cmd sudo rpm --import "$AMP_BINARY_ROOT/gpg/amp-cli.asc"
+    run_cmd sudo rpm --import "${AMP_BINARY_ROOT}/gpg/amp-cli.asc"
 
     # Install Amp
     say "Installing Amp..."
@@ -959,6 +970,8 @@ install_cli() {
         # Use RPM repository on RHEL/Fedora/CentOS
         verbose "Installing Amp CLI via RPM repository (RHEL/Fedora/CentOS detected)"
         install_rpm
+    elif is_windows; then
+        err "Amp CLI is not yet available for Windows – please use WSL or Docker."
     elif is_macos || [ "$(uname -s)" = "Linux" ]; then
         # Prefer Nix over Homebrew on macOS and Linux (non-package manager systems)
         if has_nix; then

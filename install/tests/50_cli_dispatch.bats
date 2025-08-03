@@ -53,13 +53,12 @@ load 00_helpers
     is_windows() { return 1; }
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
-    # Only Homebrew available - stub nix/nix-env to fail
-    make_stub nix 1
-    make_stub nix-env 1  
+    # Only Homebrew available - don't create nix stubs so they won't be found
     make_stub brew 0
+    /bin/chmod +x "$STUB_DIR/brew"
     
-    # Prepend our stub directory to PATH for isolation (but keep system dirs)
-    export PATH="$STUB_DIR:/usr/bin:/bin:/usr/sbin:/sbin"
+    # Use only stub directory and minimal system paths (no nix paths)
+    export PATH="$STUB_DIR:/usr/bin:/bin"
     
     # Mock install functions
     install_vscode_extension() { say "Installing Amp extension..."; }
@@ -178,12 +177,8 @@ load 00_helpers
     is_windows() { return 1; }
     export -f is_macos is_archlinux is_debian is_ubuntu is_rhel is_fedora is_centos is_windows
     
-    # Ensure no package managers are available
-    make_stub nix 1
-    make_stub nix-env 1
-    make_stub brew 1
-    
-    # Override PATH to only include our stubs
+    # Ensure no package managers are available - don't create any stubs
+    # Override PATH to only include our stubs (which won't have package managers)
     export PATH="$STUB_DIR"
     
     # Mock install function

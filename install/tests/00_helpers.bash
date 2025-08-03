@@ -76,7 +76,7 @@ assert_stub_called() {
 # Clean up stubs
 teardown_stubs() {
     if [ -n "$STUB_DIR" ] && [ -d "$STUB_DIR" ]; then
-        rm -rf "$STUB_DIR"
+        /bin/rm -rf "$STUB_DIR"
     fi
     # Restore original PATH if we saved it
     if [ -n "$ORIGINAL_PATH" ]; then

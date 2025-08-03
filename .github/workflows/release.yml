@@ -41,9 +41,9 @@ jobs:
       - name: Wait for binaries to be uploaded
         run: |
           version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
-          
+
           echo "Waiting for required binaries to be uploaded to release $version..."
-          
+
           # List of required binaries
           required_binaries=(
             "amp-darwin-arm64"
@@ -52,16 +52,16 @@ jobs:
             "amp-linux-x64"
             "amp-windows-x64.exe"
           )
-          
+
           max_attempts=60  # Wait up to 10 minutes (60 * 10 seconds)
           attempt=0
-          
+
           while [ $attempt -lt $max_attempts ]; do
             echo "Attempt $((attempt + 1))/$max_attempts - Checking for binaries..."
-            
+
             # Get list of release assets
             assets=$(gh release view "$version" --json assets --jq '.assets[].name')
-            
+
             all_found=true
             for binary in "${required_binaries[@]}"; do
               if ! echo "$assets" | grep -q "^$binary$"; then
@@ -71,17 +71,17 @@ jobs:
                 echo "Found binary: $binary"
               fi
             done
-            
+
             if [ "$all_found" = true ]; then
               echo "All required binaries found!"
               break
             fi
-            
+
             echo "Not all binaries available yet, waiting 10 seconds..."
             sleep 10
             attempt=$((attempt + 1))
           done
-          
+
           if [ $attempt -eq $max_attempts ]; then
             echo "Timeout waiting for binaries after $((max_attempts * 10)) seconds"
             echo "Available assets:"
@@ -160,21 +160,11 @@ jobs:
 
           # Upload install.sh to root
           echo "Checking for install.sh..."
-          if [ -f "${GITHUB_WORKSPACE}/install.sh" ]; then
+          if [ -f "${GITHUB_WORKSPACE}/install/install.sh" ]; then
             echo "Uploading install.sh"
-            gcloud storage cp "${GITHUB_WORKSPACE}/install.sh" "gs://packages.ampcode.com/" --project=amp-prod-0
+            gcloud storage cp "${GITHUB_WORKSPACE}/install/install.sh" "gs://packages.ampcode.com/" --project=amp-prod-0
           else
             echo "install.sh not found at expected path"
-            exit 1
-          fi
-
-          # Upload install.ps1 to root
-          echo "Checking for install.ps1..."
-          if [ -f "${GITHUB_WORKSPACE}/install.ps1" ]; then
-            echo "Uploading install.ps1"
-            gcloud storage cp "${GITHUB_WORKSPACE}/install.ps1" "gs://packages.ampcode.com/" --project=amp-prod-0
-          else
-            echo "install.ps1 not found at expected path"
             exit 1
           fi
 

@@ -1137,4 +1137,7 @@ migrate() {
     fi
 }
 
-main "$@" || exit 1
+# Only run main if not in test mode
+if [ -z "${AMP_INSTALL_TEST_MODE:-}" ]; then
+    main "$@" || exit 1
+fi

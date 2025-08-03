@@ -73,7 +73,7 @@ jobs:
 
           # NixOS testing
           - os: ubuntu-latest
-            container: ghcr.io/determinatesystems/nix:latest
+            container: nixos/nix:latest
             test_scenario: nixos
             description: "NixOS container"
 

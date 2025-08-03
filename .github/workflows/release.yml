@@ -38,6 +38,57 @@ jobs:
         env:
           GPG_TTY: $(tty)
 
+      - name: Wait for binaries to be uploaded
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
+          
+          echo "Waiting for required binaries to be uploaded to release $version..."
+          
+          # List of required binaries
+          required_binaries=(
+            "amp-darwin-arm64"
+            "amp-darwin-arm64.zip"
+            "amp-darwin-x64.zip"
+            "amp-linux-x64"
+            "amp-windows-x64.exe"
+          )
+          
+          max_attempts=60  # Wait up to 30 minutes (60 * 30 seconds)
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            echo "Attempt $((attempt + 1))/$max_attempts - Checking for binaries..."
+            
+            # Get list of release assets
+            assets=$(gh release view "$version" --json assets --jq '.assets[].name')
+            
+            all_found=true
+            for binary in "${required_binaries[@]}"; do
+              if ! echo "$assets" | grep -q "^$binary$"; then
+                echo "Missing binary: $binary"
+                all_found=false
+              else
+                echo "Found binary: $binary"
+              fi
+            done
+            
+            if [ "$all_found" = true ]; then
+              echo "All required binaries found!"
+              break
+            fi
+            
+            echo "Not all binaries available yet, waiting 30 seconds..."
+            sleep 30
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Timeout waiting for binaries after $((max_attempts * 30)) seconds"
+            echo "Available assets:"
+            gh release view "$version" --json assets --jq '.assets[].name'
+            exit 1
+          fi
+
       - name: Download and sign release binaries
         run: |
           version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"

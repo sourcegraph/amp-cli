@@ -138,6 +138,8 @@ jobs:
         id: test-nix
         if: matrix.package_manager == 'nix'
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
         run: |
           set -euo pipefail
           # Install Nix if not present

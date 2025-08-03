@@ -91,7 +91,10 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Test Environment - ${{ matrix.description }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
         run: |
+          set -euo pipefail
           echo "Setting up test environment for: ${{ matrix.description }}"
 
           case "${{ matrix.test_scenario }}" in
@@ -182,7 +185,10 @@ jobs:
       - name: Test Install Script - ${{ matrix.description }}
         id: test-install
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
         run: |
+          set -euo pipefail
           echo "Testing install script for: ${{ matrix.description }}"
 
           # For container environments, we might need to run as the appropriate user
@@ -205,6 +211,7 @@ jobs:
 
       - name: Verify Expected Behavior - ${{ matrix.description }}
         run: |
+          set -euo pipefail
           echo "Verifying expected behavior for: ${{ matrix.description }}"
 
           case "${{ matrix.test_scenario }}" in
@@ -262,6 +269,7 @@ jobs:
         id: test-doctor
         continue-on-error: true
         run: |
+          set -euo pipefail
           echo "Testing doctor command..."
           ./install.sh --doctor
         shell: bash
@@ -270,6 +278,7 @@ jobs:
         id: test-help
         continue-on-error: true
         run: |
+          set -euo pipefail
           echo "Testing help command..."
           ./install.sh --help
 
@@ -280,6 +289,7 @@ jobs:
       - name: Check test results
         if: always()
         run: |
+          set -euo pipefail
           # Check if any tests failed and fail the job if so
           failed=0
 

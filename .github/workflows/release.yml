@@ -88,6 +88,9 @@ jobs:
             gh release view "$version" --json assets --jq '.assets[].name'
             exit 1
           fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
 
       - name: Download and sign release binaries
         run: |

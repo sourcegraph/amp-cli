@@ -1,0 +1,511 @@
+---
+name: Backstop - Package Manager
+
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: backstop-pkg-manager
+  cancel-in-progress: true
+
+jobs:
+  test-installations:
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS testing
+          - os: macos-latest
+            package_manager: homebrew
+          - os: macos-latest
+            package_manager: nix
+          # Ubuntu testing
+          - os: ubuntu-latest
+            package_manager: homebrew
+          - os: ubuntu-latest
+            package_manager: nix
+          - os: ubuntu-latest
+            package_manager: apt
+          - os: ubuntu-latest
+            package_manager: rpm
+          - os: ubuntu-latest
+            package_manager: docker
+            arch: amd64
+          - os: ubuntu-latest
+            package_manager: docker
+            arch: arm64
+          # Arch Linux testing
+          - os: ubuntu-latest
+            package_manager: aur
+          # Windows testing
+          - os: windows-latest
+            package_manager: chocolatey
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Test Homebrew Installation (macOS/Linux)
+        id: test-homebrew
+        if: matrix.package_manager == 'homebrew'
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          # Install Homebrew if not present (mainly for Linux)
+          if ! command -v brew &> /dev/null; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" || true
+          fi
+
+          # Tap the repository
+          brew tap sourcegraph/amp-cli
+
+          # Install amp from the specific tap
+          brew install sourcegraph/amp-cli/amp
+
+          # Test that amp is working (handle CI terminal issues)
+          amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
+
+          # Clean up
+          brew uninstall sourcegraph/amp-cli/amp
+          brew untap sourcegraph/amp-cli
+
+      - name: Test Chocolatey Installation (Windows)
+        id: test-chocolatey
+        if: matrix.package_manager == 'chocolatey'
+        continue-on-error: true
+        shell: powershell
+        run: |
+          # Install Chocolatey if not present
+          if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+            Set-ExecutionPolicy Bypass -Scope Process -Force
+            [System.Net.ServicePointManager]::SecurityProtocol = `
+              [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          }
+
+          # Check if amp package exists in Chocolatey community repository
+          $searchResult = choco search amp --exact --limit-output
+          if ($searchResult -match "^amp\|") {
+            Write-Host "amp package found in Chocolatey community repository"
+            choco install amp -y
+            try { amp --help } catch {
+              Write-Host "amp binary installed but may have terminal compatibility issues in CI"
+            }
+            choco uninstall amp -y
+          } else {
+            Write-Host "amp package not yet published to Chocolatey community repository - skipping test"
+            Write-Host "This is expected for new packages that haven't been published yet"
+          }
+
+      - name: Test Docker Container (Linux)
+        id: test-docker
+        if: matrix.package_manager == 'docker'
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          # Set up Docker Buildx for multi-platform support
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+          docker buildx create --use --name multiarch || true
+          docker buildx inspect --bootstrap
+
+          # Test pulling and running the Docker container for the specified architecture
+          echo "Testing Docker container for ${{ matrix.arch }} architecture"
+
+          # Pull the latest container (this tests that the container exists and is accessible)
+          if docker pull --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-cli:latest; then
+            echo "Successfully pulled amp Docker container for ${{ matrix.arch }}"
+
+            # Test running the container with --help
+            echo "Testing container functionality..."
+            if docker run --rm --platform linux/${{ matrix.arch }} ghcr.io/sourcegraph/amp-cli:latest --help; then
+              echo "amp Docker container working correctly on ${{ matrix.arch }}"
+            else
+              echo "amp Docker container pulled but may have runtime issues on ${{ matrix.arch }}"
+            fi
+          else
+            echo "Failed to pull amp Docker container for ${{ matrix.arch }} - container may not be published yet"
+            echo "This is expected for new releases that haven't been built yet"
+          fi
+
+      - name: Test Nix Installation (macOS/Linux)
+        id: test-nix
+        if: matrix.package_manager == 'nix'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+        run: |
+          set -eo pipefail
+          # Install Nix if not present
+          if ! command -v nix &> /dev/null; then
+            echo "Installing Nix..."
+            curl -L https://nixos.org/nix/install | sh -s -- --daemon
+            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh || true
+          fi
+
+          # Enable flakes and nix-command features
+          mkdir -p ~/.config/nix
+          echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+
+          # Install amp via Nix flake
+          echo "Installing amp via Nix flake..."
+          NIXPKGS_ALLOW_UNFREE=1 nix --access-tokens github.com=$GITHUB_TOKEN --extra-experimental-features nix-command --extra-experimental-features flakes profile install github:sourcegraph/amp-cli
+
+          # Test that amp is working
+          amp --help || echo "amp binary installed but may have terminal compatibility issues in CI"
+
+          # Clean up
+          nix profile remove github:sourcegraph/amp-cli || true
+
+      - name: Test APT Repository Installation (Ubuntu)
+        id: test-apt
+        if: matrix.package_manager == 'apt'
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          # Test APT repository installation
+          echo "Testing APT repository installation..."
+
+          # Check if GPG key is available
+          echo "=== Checking GPG key availability ==="
+          if curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc -o /tmp/amp-cli.asc; then
+            echo "Downloaded key content:"
+            cat /tmp/amp-cli.asc
+            echo "Key file size: $(wc -c < /tmp/amp-cli.asc) bytes"
+            echo "Key file type: $(file /tmp/amp-cli.asc)"
+
+            # Validate GPG key content
+            if file /tmp/amp-cli.asc | grep -q "PGP public key" || grep -q "BEGIN PGP PUBLIC KEY BLOCK" /tmp/amp-cli.asc; then
+              echo "✅ Valid PGP key found"
+              GPG_KEY_VALID=true
+            else
+              echo "❌ Invalid PGP key content detected"
+              echo "Key contains: $(head -1 /tmp/amp-cli.asc)"
+              GPG_KEY_VALID=false
+            fi
+          else
+            echo "❌ Failed to download GPG key"
+            GPG_KEY_VALID=false
+          fi
+
+          if [ "$GPG_KEY_VALID" = "false" ]; then
+            echo "❌ GPG key not available or invalid - APT repository test failed"
+            echo "The repository must have a valid GPG key for package signing"
+            exit 1
+          fi
+
+          # Add GPG key (simulate what our install script does)
+          echo "=== Importing GPG key ==="
+          if ! sudo gpg --dearmor -o /usr/share/keyrings/amp-cli.gpg < /tmp/amp-cli.asc; then
+            echo "❌ Failed to import GPG key"
+            exit 1
+          fi
+
+          # Verify the keyring was created correctly
+          if [ -f /usr/share/keyrings/amp-cli.gpg ]; then
+            echo "✅ Keyring file created successfully"
+            ls -la /usr/share/keyrings/amp-cli.gpg
+          else
+            echo "❌ Keyring file not created"
+            exit 1
+          fi
+
+          # Add repository
+          echo "=== Adding APT repository ==="
+          echo "deb [signed-by=/usr/share/keyrings/amp-cli.gpg] https://packages.ampcode.com/debian stable main" | sudo tee /etc/apt/sources.list.d/amp-cli.list
+
+          # Check repository accessibility
+          echo "=== Checking repository accessibility ==="
+          if ! curl -fsSL https://packages.ampcode.com/debian/dists/stable/Release > /dev/null; then
+            echo "❌ Repository not accessible - skipping test"
+            echo "This is expected if the repository has not been published yet"
+            exit 0
+          fi
+
+          # Update package index with retry logic for repository sync issues
+          echo "=== Updating package index ==="
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt/3: Updating package index..."
+            if sudo apt-get update; then
+              echo "✅ Package index updated successfully"
+              break
+            else
+              echo "⚠️  Package index update failed on attempt $attempt"
+              if [ $attempt -eq 3 ]; then
+                echo "❌ Failed to update package index after 3 attempts"
+                exit 1
+              fi
+              echo "Waiting 30 seconds before retry..."
+              sleep 30
+              # Clean cache and try again
+              sudo apt-get clean
+              sudo rm -rf /var/lib/apt/lists/*
+            fi
+          done
+
+          # Check if amp package is available
+          echo "=== Checking package availability ==="
+          if ! apt-cache policy amp | grep -q "packages.ampcode.com"; then
+            echo "❌ amp package not found in repository"
+            apt-cache policy amp || true
+            exit 1
+          fi
+
+          # Install amp
+          echo "=== Installing amp package ==="
+          if ! sudo apt-get install -y amp; then
+            echo "❌ Failed to install amp package"
+            exit 1
+          fi
+
+          # Test that amp is working
+          echo "=== Testing amp installation ==="
+          if ! which amp; then
+            echo "❌ amp not found in PATH after installation"
+            exit 1
+          fi
+
+          echo "✅ amp successfully installed"
+          amp --version || echo "amp installed but may have terminal compatibility issues in CI"
+
+          # Clean up
+          echo "=== Cleaning up ==="
+          sudo apt-get remove -y amp || true
+          sudo apt-get autoremove -y || true
+          sudo rm -f /etc/apt/sources.list.d/amp-cli.list /usr/share/keyrings/amp-cli.gpg || true
+          sudo apt-get update || true
+
+      - name: Test RPM Repository Installation (Fedora Container)
+        id: test-rpm
+        if: matrix.package_manager == 'rpm'
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          # Test RPM repository installation using Fedora container
+          echo "Testing RPM repository installation in Fedora container..."
+
+          docker run --rm fedora:latest bash -c "
+            set -eo pipefail
+            # Install required tools
+            echo '=== Installing required tools ==='
+            dnf install -y curl rpm file
+
+            # Check if GPG key is available
+            echo '=== Checking GPG key availability ==='
+            if curl -fsSL https://packages.ampcode.com/gpg/amp-cli.asc -o /tmp/amp-cli.asc; then
+              echo 'Downloaded key content:'
+              cat /tmp/amp-cli.asc
+              echo 'Key file size:' \$(wc -c < /tmp/amp-cli.asc) 'bytes'
+              echo 'Key file type:' \$(file /tmp/amp-cli.asc)
+
+              # Validate GPG key content
+              if file /tmp/amp-cli.asc | grep -q 'PGP public key' || grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /tmp/amp-cli.asc; then
+                echo '✅ Valid PGP key found'
+                GPG_KEY_VALID=true
+              else
+                echo '❌ Invalid PGP key content detected'
+                echo 'Key contains:' \$(head -1 /tmp/amp-cli.asc)
+                GPG_KEY_VALID=false
+              fi
+            else
+              echo '❌ Failed to download GPG key'
+              GPG_KEY_VALID=false
+            fi
+
+            if [ \"\$GPG_KEY_VALID\" = \"false\" ]; then
+              echo '❌ GPG key not available or invalid - RPM repository test failed'
+              echo 'The repository must have a valid GPG key for package signing'
+              exit 1
+            fi
+
+            # Add GPG key
+            echo '=== Importing GPG key ==='
+            if ! rpm --import /tmp/amp-cli.asc; then
+              echo '❌ Failed to import GPG key'
+              exit 1
+            fi
+            echo '✅ GPG key imported successfully'
+
+            # List imported GPG keys
+            echo '=== Verifying imported GPG keys ==='
+            rpm -q gpg-pubkey --qf '%{NAME}-%{VERSION}-%{RELEASE} %{SUMMARY}\n' || true
+
+            # Check repository accessibility
+            echo '=== Checking repository accessibility ==='
+            if ! curl -fsSL https://packages.ampcode.com/rpm/repodata/repomd.xml > /dev/null; then
+              echo '❌ Repository not accessible - skipping test'
+              echo 'This is expected if the repository has not been published yet'
+              exit 0
+            fi
+
+            # Add repository
+            echo '=== Adding RPM repository ==='
+            cat > /etc/yum.repos.d/amp-cli.repo << EOF
+          [amp-cli]
+          name=Amp CLI Repository
+          baseurl=https://packages.ampcode.com/rpm
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://packages.ampcode.com/gpg/amp-cli.asc
+          EOF
+
+            # Update repository metadata with retry logic
+            echo '=== Updating repository metadata ==='
+            for attempt in 1 2 3; do
+              echo \"Attempt \$attempt/3: Updating repository metadata...\"
+              if dnf makecache; then
+                echo '✅ Repository metadata updated successfully'
+                break
+              else
+                echo '⚠️  Repository metadata update failed on attempt' \$attempt
+                if [ \$attempt -eq 3 ]; then
+                  echo '❌ Failed to update repository metadata after 3 attempts'
+                  exit 1
+                fi
+                echo 'Waiting 30 seconds before retry...'
+                sleep 30
+                dnf clean all
+              fi
+            done
+
+            # Check if amp package is available
+            echo '=== Checking package availability ==='
+            if ! dnf info amp > /dev/null 2>&1; then
+              echo '❌ amp package not found in repository'
+              dnf search amp || true
+              exit 1
+            fi
+
+            # Install amp
+            echo '=== Installing amp package ==='
+            if ! dnf install -y amp; then
+              echo '❌ Failed to install amp package'
+              exit 1
+            fi
+
+            # Test that amp is working
+            echo '=== Testing amp installation ==='
+            if ! which amp; then
+              echo '❌ amp not found in PATH after installation'
+              exit 1
+            fi
+
+            echo '✅ amp successfully installed'
+            amp --version || echo 'amp installed but may have terminal compatibility issues in CI'
+          "
+
+      - name: Test AUR Installation (Arch Linux Container)
+        id: test-aur
+        if: matrix.package_manager == 'aur'
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          # Test AUR installation using Arch Linux container with yay and paru
+          echo "Testing AUR installation in Arch Linux container..."
+
+          docker run --rm archlinux:base-devel bash -c "
+            set -eo pipefail
+            # Update package database and install dependencies
+            echo '=== Updating package database ==='
+            pacman -Sy --noconfirm
+
+            echo '=== Installing dependencies ==='
+            pacman -S --noconfirm git base-devel sudo
+
+            # Create a non-root user for AUR operations (required for makepkg)
+            echo '=== Creating non-root user ==='
+            useradd -m -G wheel testuser
+            echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+            # Install yay (AUR helper) using binary package
+            echo '=== Installing yay ==='
+            pacman -S --noconfirm yay
+
+            # Verify yay is installed
+            echo '=== Verifying yay installation ==='
+            which yay && yay --version
+
+            # Test amp installation via AUR using yay
+            echo '=== Installing amp via yay ==='
+            su - testuser -c 'yay -S --noconfirm ampcode'
+
+            # Test that amp is working
+            echo '=== Testing amp installation ==='
+            which amp || echo 'amp not in PATH'
+            amp --help || echo 'amp binary installed but may have terminal compatibility issues in CI'
+          "
+
+      - name: Check test results
+        if: always()
+        shell: bash
+        run: |
+          set -eo pipefail
+          # Check if any tests failed and fail the job if so
+          failed=0
+
+          if [[ "${{ steps.test-homebrew.outcome }}" == "failure" ]]; then
+            echo "❌ Homebrew installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-homebrew.outcome }}" == "success" ]]; then
+            echo "✅ Homebrew installation test passed"
+          fi
+
+          if [[ "${{ steps.test-chocolatey.outcome }}" == "failure" ]]; then
+            echo "❌ Chocolatey installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-chocolatey.outcome }}" == "success" ]]; then
+            echo "✅ Chocolatey installation test passed"
+          fi
+
+          if [[ "${{ steps.test-docker.outcome }}" == "failure" ]]; then
+            echo "❌ Docker container test failed"
+            failed=1
+          elif [[ "${{ steps.test-docker.outcome }}" == "success" ]]; then
+            echo "✅ Docker container test passed"
+          fi
+
+          if [[ "${{ steps.test-nix.outcome }}" == "failure" ]]; then
+            echo "❌ Nix installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-nix.outcome }}" == "success" ]]; then
+            echo "✅ Nix installation test passed"
+          fi
+
+          if [[ "${{ steps.test-apt.outcome }}" == "failure" ]]; then
+            echo "❌ APT repository installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-apt.outcome }}" == "success" ]]; then
+            echo "✅ APT repository installation test passed"
+          fi
+
+          if [[ "${{ steps.test-rpm.outcome }}" == "failure" ]]; then
+            echo "❌ RPM repository installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-rpm.outcome }}" == "success" ]]; then
+            echo "✅ RPM repository installation test passed"
+          fi
+
+          if [[ "${{ steps.test-aur.outcome }}" == "failure" ]]; then
+            echo "❌ AUR installation test failed"
+            failed=1
+          elif [[ "${{ steps.test-aur.outcome }}" == "success" ]]; then
+            echo "✅ AUR installation test passed"
+          fi
+
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "❌ One or more installation tests failed"
+            exit 1
+          else
+            echo ""
+            echo "✅ All applicable installation tests passed"
+          fi

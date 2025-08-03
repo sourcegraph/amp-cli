@@ -1,0 +1,69 @@
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# Nix build results
+result
+result-*
+
+# RPM packages
+*.rpm
+
+# Debian packages
+*.deb
+
+# Choco packages
+*.nupkg
+
+# Build artifacts and temporary files
+*.tar.gz
+*.zip
+*.rpm
+*.deb
+pkgroot
+
+# GPG signing artifacts
+*.asc
+*.sig
+*.gpg
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.exe
+*.msi
+
+# Binaries
+amp-*
+!amp-*.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+.tmp/

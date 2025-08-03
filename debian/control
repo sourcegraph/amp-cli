@@ -1,0 +1,11 @@
+Package: amp
+Version: 0.0.1754223932-1
+Architecture: arm64
+Maintainer: Sourcegraph <amp-devs@sourcegraph.com>
+Depends: ripgrep
+Installed-Size: 101488
+Section: devel
+Priority: optional
+Homepage: https://ampcode.com
+Description: An agentic coding tool, in research preview from Sourcegraph
+ Amp is an agentic coding tool engineered to maximize what's possible with today's frontier models—autonomous reasoning, comprehensive code editing, and complex task execution.

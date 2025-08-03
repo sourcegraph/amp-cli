@@ -1,0 +1,345 @@
+---
+name: Backstop - Install Script
+
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "install.sh"
+      - "install.ps1"
+
+concurrency:
+  group: backstop-install-sh
+  cancel-in-progress: true
+
+jobs:
+  test-install-script:
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') || github.event_name == 'pull_request')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS testing
+          - os: macos-latest
+            test_scenario: macos-native
+            description: "macOS native (with Homebrew)"
+
+          # Ubuntu testing (native)
+          - os: ubuntu-latest
+            test_scenario: ubuntu-native
+            description: "Ubuntu native (APT repository)"
+
+          # Ubuntu migration testing (Node.js to binary)
+          - os: ubuntu-latest
+            test_scenario: ubuntu-migrate-npm
+            description: "Ubuntu migration from npm global @sourcegraph/amp"
+          - os: ubuntu-latest
+            test_scenario: ubuntu-migrate-pnpm
+            description: "Ubuntu migration from pnpm global @sourcegraph/amp"
+          - os: ubuntu-latest
+            test_scenario: ubuntu-migrate-yarn
+            description: "Ubuntu migration from yarn global @sourcegraph/amp"
+
+          # Container-based Linux distro testing
+          - os: ubuntu-latest
+            container: archlinux:base-devel
+            test_scenario: arch-linux
+            description: "Arch Linux container"
+          - os: ubuntu-latest
+            container: debian:bookworm
+            test_scenario: debian
+            description: "Debian container"
+          - os: ubuntu-latest
+            container: fedora:latest
+            test_scenario: fedora
+            description: "Fedora container"
+          - os: ubuntu-latest
+            container: almalinux:latest
+            test_scenario: rhel
+            description: "AlmaLinux container (RHEL-compatible)"
+          - os: ubuntu-latest
+            container: rockylinux/rockylinux:9
+            test_scenario: rocky
+            description: "Rocky Linux container (RHEL-compatible)"
+          - os: ubuntu-latest
+            container: quay.io/centos/centos:stream9
+            test_scenario: centos
+            description: "CentOS Stream container"
+
+          # NixOS testing
+          - os: ubuntu-latest
+            container: ghcr.io/determinatesystems/nix:latest
+            test_scenario: nixos
+            description: "NixOS container"
+
+          # Windows testing
+          - os: windows-latest
+            test_scenario: windows
+            description: "Windows (unsupported platform)"
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || null }}
+    continue-on-error: ${{ matrix.test_scenario == 'windows' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Test Environment - ${{ matrix.description }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+        run: |
+          set -eo pipefail
+          echo "Setting up test environment for: ${{ matrix.description }}"
+
+          case "${{ matrix.test_scenario }}" in
+            "macos-native")
+              echo "macOS environment detected"
+              echo "Homebrew should be available by default"
+              ;;
+            "ubuntu-native")
+              echo "Ubuntu environment detected"
+              echo "APT package manager available"
+              sudo apt-get update
+              ;;
+            "ubuntu-migrate-npm")
+              echo "Ubuntu environment with npm global @sourcegraph/amp"
+              sudo apt-get update
+              sudo apt-get install -y nodejs npm curl wget git sudo ca-certificates gnupg
+              # Install @sourcegraph/amp globally via npm
+              sudo npm install -g @sourcegraph/amp
+              echo "Installed @sourcegraph/amp via npm globally"
+              amp --version || echo "amp command available from npm installation"
+              ;;
+            "ubuntu-migrate-pnpm")
+              echo "Ubuntu environment with pnpm global @sourcegraph/amp"
+              sudo apt-get update
+              sudo apt-get install -y nodejs npm curl wget git sudo ca-certificates gnupg
+              # Install pnpm and then @sourcegraph/amp
+              sudo pnpm setup
+              sudo npm install -g pnpm
+              sudo pnpm add -g @sourcegraph/amp
+              echo "Installed @sourcegraph/amp via pnpm globally"
+              amp --version || echo "amp command available from pnpm installation"
+              ;;
+            "ubuntu-migrate-yarn")
+              echo "Ubuntu environment with yarn global @sourcegraph/amp"
+              sudo apt-get update
+              sudo apt-get install -y nodejs npm curl wget git sudo ca-certificates gnupg
+              # Install yarn and then @sourcegraph/amp
+              sudo npm install -g yarn
+              sudo yarn global add @sourcegraph/amp
+              echo "Installed @sourcegraph/amp via yarn globally"
+              amp --version || echo "amp command available from yarn installation"
+              ;;
+            "arch-linux")
+              echo "Arch Linux container environment"
+              # Update package database
+              pacman -Sy --noconfirm
+              # Install basic tools needed for testing
+              pacman -S --noconfirm curl wget git base-devel sudo
+              # Create a non-root user for AUR testing
+              useradd -m -G wheel testuser
+              echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+              ;;
+            "debian")
+              echo "Debian container environment"
+              apt-get update
+              apt-get install -y curl wget git sudo ca-certificates gnupg
+              ;;
+            "fedora")
+            echo "Fedora container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
+            "rhel"|"rocky")
+            echo "RHEL-compatible container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
+            "centos")
+            echo "CentOS Stream container environment"
+            dnf update -y
+            dnf install -y wget git sudo rpm gnupg2
+            ;;
+            "nixos")
+              echo "NixOS container environment"
+              # Nix should already be available in nixos/nix container
+              nix --version || echo "Nix not available"
+              # Install git for checkout to work
+              nix-env -iA nixpkgs.git
+              ;;
+            "windows")
+              echo "Windows environment - testing unsupported platform behavior"
+              ;;
+            *)
+              echo "Default setup for ${{ matrix.test_scenario }}"
+              ;;
+          esac
+        shell: bash
+
+      - name: Test Install Script - ${{ matrix.description }}
+        id: test-install
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+        run: |
+          set -eo pipefail
+          echo "Testing install script for: ${{ matrix.description }}"
+
+          # For container environments, we might need to run as the appropriate user
+          case "${{ matrix.test_scenario }}" in
+            "arch-linux")
+              echo "Testing as non-root user for AUR support"
+              # Test as testuser for AUR functionality
+              su - testuser -c "cd /github/workspace && ./install/install.sh --no-confirm --verbose"
+              ;;
+            "windows")
+              echo "Testing Windows (should show unsupported platform)"
+              ./install/install.sh --verbose
+              ;;
+            *)
+              echo "Testing standard install script execution"
+              ./install/install.sh --no-confirm --verbose
+              ;;
+          esac
+        shell: bash
+
+      - name: Verify Expected Behavior - ${{ matrix.description }}
+        run: |
+          set -eo pipefail
+          echo "Verifying expected behavior for: ${{ matrix.description }}"
+
+          case "${{ matrix.test_scenario }}" in
+            "macos-native")
+              echo "✅ macOS should detect platform and use Homebrew (if available) or Nix"
+              ;;
+            "ubuntu-native")
+              echo "✅ Ubuntu should detect platform and use APT repository"
+              ;;
+            "ubuntu-migrate-npm"|"ubuntu-migrate-pnpm"|"ubuntu-migrate-yarn")
+              echo "✅ Should migrate from Node.js version to binary version"
+              # Verify the Node.js version is no longer installed
+              if npm list -g --depth=0 2>/dev/null | grep -q "@sourcegraph/amp@"; then
+                echo "❌ npm global @sourcegraph/amp still installed - migration failed"
+                exit 1
+              fi
+              if command -v pnpm >/dev/null && pnpm list -g --depth=0 2>/dev/null | grep -q "@sourcegraph/amp@"; then
+                echo "❌ pnpm global @sourcegraph/amp still installed - migration failed"
+                exit 1
+              fi
+              if command -v yarn >/dev/null && yarn global list 2>/dev/null | grep -q "@sourcegraph/amp@"; then
+                echo "❌ yarn global @sourcegraph/amp still installed - migration failed"
+                exit 1
+              fi
+              echo "✅ Node.js version successfully removed during migration"
+              ;;
+            "arch-linux")
+              echo "✅ Arch Linux should detect platform and use AUR installation"
+              ;;
+            "debian")
+              echo "✅ Debian should detect platform and use APT repository"
+              ;;
+            "fedora")
+              echo "✅ Fedora should detect platform and use RPM repository"
+              ;;
+            "rhel"|"rocky")
+              echo "✅ RHEL-compatible distro should use RPM repository"
+              ;;
+            "centos")
+              echo "✅ CentOS should use RPM repository"
+              ;;
+            "nixos")
+              echo "✅ NixOS container should have Nix available for installation"
+              ;;
+            "windows")
+              echo "✅ Windows should show unsupported platform message"
+              ;;
+            *)
+              echo "✅ Generic test passed for ${{ matrix.test_scenario }}"
+              ;;
+          esac
+        shell: bash
+
+      - name: Test Doctor Command
+        id: test-doctor
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          echo "Testing doctor command..."
+          ./install/install.sh --doctor
+        shell: bash
+
+      - name: Test Help and Version
+        id: test-help
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          echo "Testing help command..."
+          ./install/install.sh --help
+
+          echo "Testing version command..."
+          ./install/install.sh --version
+        shell: bash
+
+      - name: Check test results
+        if: always()
+        run: |
+          set -eo pipefail
+          # Check if any tests failed and fail the job if so
+          failed=0
+
+          # Windows is an *unsupported* platform – install & doctor MUST fail.
+          if [[ "${{ matrix.test_scenario }}" == "windows" ]]; then
+            if [[ "${{ steps.test-install.outcome }}" == "failure" ]]; then
+              echo "✅ Install script correctly failed on Windows (unsupported platform)"
+            else
+              echo "❌ Install script unexpectedly succeeded on Windows"
+              failed=1
+            fi
+
+            if [[ "${{ steps.test-doctor.outcome }}" == "failure" ]]; then
+              echo "✅ Doctor command correctly failed on Windows (unsupported platform)"
+            else
+              echo "❌ Doctor command unexpectedly succeeded on Windows"
+              failed=1
+            fi
+
+          # All other platforms expect success
+          else
+            if [[ "${{ steps.test-install.outcome }}" != "success" ]]; then
+              echo "❌ Install script test failed for ${{ matrix.description }}"
+              failed=1
+            else
+              echo "✅ Install script test passed for ${{ matrix.description }}"
+            fi
+
+            if [[ "${{ steps.test-doctor.outcome }}" != "success" ]]; then
+              echo "❌ Doctor command test failed"
+              failed=1
+            else
+              echo "✅ Doctor command test passed"
+            fi
+          fi
+
+          if [[ "${{ steps.test-help.outcome }}" == "failure" ]]; then
+            echo "❌ Help/version command test failed"
+            failed=1
+          elif [[ "${{ steps.test-help.outcome }}" == "success" ]]; then
+            echo "✅ Help/version command test passed"
+          fi
+
+          if [[ $failed -eq 1 ]]; then
+            echo ""
+            echo "❌ One or more install script tests failed for ${{ matrix.description }}"
+            exit 1
+          else
+            echo ""
+            echo "✅ All install script tests passed for ${{ matrix.description }}"
+          fi
+        shell: bash

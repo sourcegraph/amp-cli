@@ -1,0 +1,61 @@
+---
+name: Debug GCP Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Test message to include in the file'
+        required: false
+        default: 'Debug test from GitHub Actions'
+        type: string
+
+jobs:
+  debug-upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Create test file
+        run: |
+          echo "Debug test file" > debug-test.txt
+          echo "Timestamp: $(date)" >> debug-test.txt
+          echo "GitHub Run ID: ${{ github.run_id }}" >> debug-test.txt
+          echo "User message: ${{ inputs.test_message }}" >> debug-test.txt
+          echo "Repository: ${{ github.repository }}" >> debug-test.txt
+          echo "Ref: ${{ github.ref }}" >> debug-test.txt
+          cat debug-test.txt
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Test GCP authentication
+        run: |
+          echo "Testing GCP authentication..."
+          gcloud auth list
+          gcloud config list
+
+      - name: Upload test file to GCS
+        run: |
+          echo "Uploading test file to packages.ampcode.com bucket..."
+          # Upload the test file directly (service account already authenticated via workload identity)
+          gcloud storage cp debug-test.txt "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt" --project=amp-prod-0
+          echo "Upload completed successfully!"
+
+      - name: Verify upload
+        run: |
+          echo "Verifying upload..."
+          gcloud storage ls "gs://packages.ampcode.com/debug/"
+          echo "File details:"
+          gcloud storage ls -L "gs://packages.ampcode.com/debug/debug-test-${{ github.run_id }}.txt"

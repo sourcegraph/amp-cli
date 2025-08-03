@@ -1,0 +1,508 @@
+---
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  RELEASE_VERSION: >-
+    ${{ github.event_name == 'workflow_dispatch'
+          && inputs.release_tag
+          || github.event.release.tag_name }}
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  gpg-sign-binaries:
+    runs-on: ubuntu-latest
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup GPG
+        run: |
+          # Mask secrets
+          echo "::add-mask::${{ secrets.DEB_GPG_PRIVATE_KEY }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_PUBLIC_KEY }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_PASSWORD }}"
+          
+          # Import GPG keys securely
+          printf '%s' "${{ secrets.DEB_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          printf '%s' "${{ secrets.DEB_GPG_PUBLIC_KEY }}" | gpg --batch --import
+        env:
+          GPG_TTY: $(tty)
+
+      - name: Wait for binaries to be uploaded
+        run: |
+          version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
+
+          echo "Waiting for required binaries to be uploaded to release $version..."
+
+          # List of required binaries
+          required_binaries=(
+            "amp-darwin-arm64"
+            "amp-darwin-arm64.zip"
+            "amp-darwin-x64.zip"
+            "amp-linux-x64"
+            "amp-windows-x64.exe"
+          )
+
+          max_attempts=60  # Wait up to 10 minutes (60 * 10 seconds)
+          attempt=0
+
+          while [ $attempt -lt $max_attempts ]; do
+            echo "Attempt $((attempt + 1))/$max_attempts - Checking for binaries..."
+
+            # Get list of release assets
+            assets=$(gh release view "$version" --json assets --jq '.assets[].name')
+
+            all_found=true
+            for binary in "${required_binaries[@]}"; do
+              if ! echo "$assets" | grep -q "^$binary$"; then
+                echo "Missing binary: $binary"
+                all_found=false
+              else
+                echo "Found binary: $binary"
+              fi
+            done
+
+            if [ "$all_found" = true ]; then
+              echo "All required binaries found!"
+              break
+            fi
+
+            echo "Not all binaries available yet, waiting 10 seconds..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Timeout waiting for binaries after $((max_attempts * 10)) seconds"
+            echo "Available assets:"
+            gh release view "$version" --json assets --jq '.assets[].name'
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+
+      - name: Download and sign release binaries
+        run: |
+          # Mask all secrets at start
+          echo "::add-mask::${{ secrets.DEB_GPG_PASSWORD }}"
+          echo "::add-mask::${{ secrets.DEB_GPG_KEY_ID }}"
+          echo "::add-mask::${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}"
+          
+          version="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
+
+          # Download all binary assets
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          # Sign all downloaded binaries (excluding .asc files)
+          cd binaries
+          
+          # Create secure temporary passphrase file with random name
+          PASSPHRASE_FILE=$(mktemp -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" passphrase.XXXXXX)
+          chmod 600 "$PASSPHRASE_FILE"
+          trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+          printf '%s' "${{ secrets.DEB_GPG_PASSWORD }}" > "$PASSPHRASE_FILE"
+          
+          for binary in amp-*; do
+            if [ -f "$binary" ] && [[ "$binary" != *.asc ]]; then
+              echo "Signing binary: $binary"
+              gpg --batch --yes --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" \
+                --default-key "${{ secrets.DEB_GPG_KEY_ID }}" \
+                --armor --detach-sign "$binary"
+            fi
+          done
+
+          # Clean up passphrase file (trap will also handle this)
+          rm -f "$PASSPHRASE_FILE"
+
+          # Upload signature files to the release
+          gh release upload "$version" *.asc --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+
+  upload-binaries-to-gcs:
+    runs-on: ubuntu-latest
+    needs: gpg-sign-binaries
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: Download and upload binaries to GCS
+        run: |
+          version="${{ env.RELEASE_VERSION }}"
+
+          # Download all binary assets and signatures
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          cd binaries
+
+          # Upload all binaries and signatures to versioned directory
+          for file in amp-*; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $file"
+              gcloud storage cp "$file" "gs://packages.ampcode.com/binaries/cli/$version/" --project=amp-prod-0
+            fi
+          done
+
+          # Upload install.sh to root
+          echo "Checking for install.sh..."
+          if [ -f "${GITHUB_WORKSPACE}/install/install.sh" ]; then
+            echo "Uploading install.sh"
+            gcloud storage cp "${GITHUB_WORKSPACE}/install/install.sh" "gs://packages.ampcode.com/" --project=amp-prod-0
+          else
+            echo "install.sh not found at expected path"
+            exit 1
+          fi
+
+          # Upload index.html to root
+          echo "Checking for index.html..."
+          if [ -f "${GITHUB_WORKSPACE}/repository/index.html" ]; then
+            echo "Uploading index.html"
+            gcloud storage cp "${GITHUB_WORKSPACE}/repository/index.html" "gs://packages.ampcode.com/" --project=amp-prod-0
+          else
+            echo "index.html not found at expected path"
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+
+  upload-manifest-to-gcs:
+    runs-on: ubuntu-latest
+    needs: upload-binaries-to-gcs
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: Build and upload manifest
+        run: |
+          # Build manifest from releases
+          chmod +x ./scripts/build-manifest.sh
+          ./scripts/build-manifest.sh
+
+          # Upload manifest to GCS
+          echo "Uploading manifest.json"
+          gcloud storage cp "./repository/binaries/cli/manifest.json" "gs://packages.ampcode.com/binaries/cli/" --project=amp-prod-0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+
+  build-packages:
+    needs: [gpg-sign-binaries, upload-binaries-to-gcs]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: write  # needed for git push and release upload
+      packages: write  # needed for docker push to GHCR
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Single arch packages
+          - package: aur
+            runner: ubuntu-latest
+            container: archlinux:base-devel
+            script: ./scripts/build-aur.sh
+          - package: nix
+            runner: ubuntu-latest
+            script: ./scripts/build-nix.sh
+          - package: homebrew
+            runner: macos-latest
+            script: ./scripts/build-homebrew.sh
+          - package: chocolatey
+            runner: windows-latest
+            script: ./scripts/build-chocolatey.ps1
+          # Multi-arch packages - Docker
+          - package: docker
+            runner: ubuntu-latest
+            platform: linux/amd64
+            arch: x64
+            script: ./scripts/build-docker.sh
+          - package: docker
+            runner: ubuntu-latest
+            platform: linux/arm64
+            arch: arm64
+            script: ./scripts/build-docker.sh
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }} (Windows)
+        if: contains(matrix.runner, 'windows')
+        run: |
+          & ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          CHOCO_PUBLISH_TOKEN: ${{ secrets.CHOCO_PUBLISH_TOKEN }}
+
+      - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }} (Unix)
+        if: ${{ !contains(matrix.runner, 'windows') }}
+        run: |
+          chmod +x ${{ matrix.script }}
+          ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          DEB_GPG_PRIVATE_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PRIVATE_KEY || '' }}
+          DEB_GPG_PUBLIC_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PUBLIC_KEY || '' }}
+          DEB_GPG_PASSWORD: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PASSWORD || '' }}
+          DEB_GPG_KEY_ID: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_KEY_ID || '' }}
+          AUR_SSH_PRIVATE_KEY: ${{ matrix.package == 'aur' && secrets.ARCH_AUR_PUBLISH_PRIVATE_KEY || '' }}
+
+  build-deb-rpm-packages:
+    needs: [gpg-sign-binaries, upload-binaries-to-gcs]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: write  # needed for git push and release upload
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Multi-arch packages - Debian
+          - package: debian
+            runner: ubuntu-latest
+            arch: amd64
+            script: ./scripts/build-debian.sh
+          - package: debian
+            runner: ubuntu-latest
+            arch: arm64
+            script: ./scripts/build-debian.sh
+          # Multi-arch packages - RPM
+          - package: rpm
+            runner: ubuntu-latest
+            arch: x86_64
+            script: ./scripts/build-rpm.sh
+          - package: rpm
+            runner: ubuntu-latest
+            arch: aarch64
+            script: ./scripts/build-rpm.sh
+    runs-on: ${{ matrix.runner }}
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }}
+        run: |
+          chmod +x ${{ matrix.script }}
+          ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          DEB_GPG_PRIVATE_KEY: ${{ secrets.DEB_GPG_PRIVATE_KEY }}
+          DEB_GPG_PUBLIC_KEY: ${{ secrets.DEB_GPG_PUBLIC_KEY }}
+          DEB_GPG_PASSWORD: ${{ secrets.DEB_GPG_PASSWORD }}
+          DEB_GPG_KEY_ID: ${{ secrets.DEB_GPG_KEY_ID }}
+
+      - name: Upload artifacts for repository build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.package == 'debian' && format('amp-{0}.deb', matrix.arch) || format('amp-{0}.rpm', matrix.arch) }}
+          path: |
+            artifacts/*.deb
+            artifacts/*.deb.asc
+            artifacts/*.rpm
+            artifacts/*.rpm.asc
+
+  build-and-upload-repositories-to-gcs:
+    runs-on: ubuntu-latest
+    needs: [gpg-sign-binaries, build-deb-rpm-packages]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'write' # needed for release upload
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Download package artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: amp-*
+          path: artifacts/
+          merge-multiple: true
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: Build repositories
+        run: |
+          chmod +x ./scripts/build-repositories.sh
+          ./scripts/build-repositories.sh "${{ env.RELEASE_VERSION }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GPG_PRIVATE_KEY: ${{ secrets.DEB_GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.DEB_GPG_PASSWORD }}
+          GPG_KEY_ID: ${{ secrets.DEB_GPG_KEY_ID }}
+
+  upload-deb-and-rpm-binaries-to-gcs:
+    runs-on: ubuntu-latest
+    needs: [gpg-sign-binaries, build-deb-rpm-packages]
+    if: |
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) &&
+      needs.gpg-sign-binaries.result == 'success' &&
+      needs.build-deb-rpm-packages.result == 'success'
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: Download and upload deb/rpm binaries to GCS
+        run: |
+          version="${{ env.RELEASE_VERSION }}"
+
+          # Download all binary assets and signatures
+          gh release download "$version" --pattern "amp-*" --dir ./binaries
+
+          cd binaries
+
+          # Upload all deb/rpm binaries and signatures to versioned directory
+          for file in amp-*deb* amp*rpm*; do
+            if [ -f "$file" ]; then
+              echo "Uploading: $file"
+              gcloud storage cp "$file" "gs://packages.ampcode.com/binaries/cli/$version/" --project=amp-prod-0
+            fi
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+
+  set-gcs-metadata:
+    runs-on: ubuntu-latest
+    needs: [upload-deb-and-rpm-binaries-to-gcs, build-packages, upload-manifest-to-gcs]
+    if: |
+      always() &&
+      github.repository == 'sourcegraph/amp-cli' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: gcloud auth
+        uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          workload_identity_provider: >-
+            projects/527047051561/locations/global/workloadIdentityPools/amp-publishing-provider/providers/amp-publishing-provider
+          service_account: wi-gh-msp-amp-publishing@sourcegraph-dev.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+
+      - name: Set content types and cache headers
+        run: |
+          # Set appropriate content types and cache headers
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/index.html || true
+
+          gsutil -m setmeta -h "Content-Type:text/html" \
+            -h "Cache-Control:public, max-age=300" \
+            gs://packages.ampcode.com/binaries/cli/manifest.json || true
+
+          gsutil -m setmeta -h "Content-Type:application/pgp-keys" \
+            -h "Cache-Control:public, max-age=86400" \
+            "gs://packages.ampcode.com/gpg/*.asc" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/debian/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/rpm/**" || true
+
+          gsutil -m setmeta -h "Cache-Control:public, max-age=3600" \
+            "gs://packages.ampcode.com/binaries/cli/**" || true

@@ -97,6 +97,14 @@ setup_secure_ssh() {
     # Write SSH key securely
     printf '%s\n' "$ssh_key" > "$key_file"
 
+    # Also create expected file for legacy script compatibility
+    if [[ "$host" == "aur.archlinux.org" ]]; then
+        cp "$key_file" ~/.ssh/aur
+        chmod 600 ~/.ssh/aur
+        # Export key file path for script compatibility
+        export AUR_SSH_KEY_FILE="$key_file"
+    fi
+
     # Create SSH config with secure settings
     cat > ~/.ssh/config << EOF
 Host $host

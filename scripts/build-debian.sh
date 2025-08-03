@@ -85,37 +85,84 @@ cp amp_${VERSION}-1_$arch.deb artifacts/
 cp amp_${VERSION}-1_$arch.deb.asc artifacts/
 
 # Configure git and commit changes
+echo "=== GIT DEBUGGING STARTED (Debian) ==="
+echo "Current working directory: $(pwd)"
+echo "Git status before any operations:"
+git status --porcelain=v1 || true
+echo "Git branch list:"
+git branch -a || true
+echo "Git remote info:"
+git remote -v || true
+echo "Current HEAD:"
+git rev-parse HEAD || true
+
 git config --local user.email "amp@ampcode.com"
 git config --local user.name "Amp"
 
 # Configure git to use GitHub token if available
 if [ -n "${GITHUB_TOKEN:-}" ]; then
+    echo "Setting up GitHub token authentication"
     git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/sourcegraph/amp-cli.git"
+    echo "Remote URL updated to use token"
 fi
 
 # Ensure we're on the main branch (not detached HEAD)
-git checkout main || git checkout -b main
+echo "Attempting to checkout main branch..."
+if git checkout main; then
+    echo "Successfully checked out existing main branch"
+else
+    echo "Main branch doesn't exist, creating it..."
+    git checkout -b main
+    echo "Created main branch, exit code: $?"
+fi
+
+echo "After branch setup:"
+echo "Current branch: $(git branch --show-current || echo 'N/A')"
+echo "All branches:"
+git branch -a || true
 
 # Retry logic for concurrent workflow conflicts
 for i in {1..5}; do
     echo "Attempt $i/5 to commit and push changes"
 
     # Pull latest changes
-    git pull origin main || true
+    echo "Pulling latest changes from origin/main..."
+    if git pull origin main; then
+        echo "Pull successful"
+    else
+        echo "Pull failed, continuing anyway..."
+    fi
 
     # Add and commit changes
+    echo "Adding files to git..."
     git add debian/changelog debian/control
+    echo "Files added. Git status before commit:"
+    git status --porcelain=v1 || true
+    
+    echo "Attempting commit..."
     if git commit -m "Update Debian package files to v$VERSION"; then
+        echo "Commit successful. Current branch and HEAD info:"
+        echo "Current branch: $(git branch --show-current || echo 'N/A')"
+        echo "Current HEAD: $(git rev-parse HEAD || echo 'N/A')"
+        echo "Last commit: $(git log --oneline -1 || echo 'N/A')"
+        
         # Try to push
+        echo "Attempting to push to origin main..."
         if git push --set-upstream origin main; then
             echo "Successfully pushed changes on attempt $i"
             break
         else
             echo "Push failed on attempt $i, retrying..."
+            echo "Git status after failed push:"
+            git status || true
+            echo "Git branches after failed push:"
+            git branch -a || true
             sleep $((i * 2))
         fi
     else
         echo "No changes to commit on attempt $i"
+        echo "Git status after failed commit:"
+        git status || true
         break
     fi
 done

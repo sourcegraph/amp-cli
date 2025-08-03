@@ -52,9 +52,7 @@
           configData = ''
             extends: default
             rules:
-              line-length:
-                max: 120
-                level: warning
+              line-length: disable
               comments:
                 min-spaces-from-content: 1
               document-start: disable

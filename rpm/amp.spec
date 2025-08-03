@@ -24,8 +24,8 @@ Amp is an agentic coding tool engineered to maximize what’s possible with toda
 # No build required for binary package
 
 %install
-mkdir -p %{buildroot}%{_bindir}
-install -m 0755 amp %{buildroot}%{_bindir}/amp
+mkdir -p %{buildroot}/usr/local/bin
+install -m 0755 amp %{buildroot}/usr/local/bin/amp
 
 %files
-%{_bindir}/amp
+/usr/local/bin/amp

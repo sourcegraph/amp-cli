@@ -322,6 +322,7 @@ jobs:
 
       - name: Check test results
         if: always()
+        shell: bash
         run: |
           # Check if any tests failed and fail the job if so
           failed=0

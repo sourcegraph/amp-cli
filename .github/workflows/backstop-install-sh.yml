@@ -73,9 +73,8 @@ jobs:
 
           # NixOS testing
           - os: ubuntu-latest
-            container: nixos/nix:latest
             test_scenario: nixos
-            description: "NixOS container"
+            description: "Nix environment on Ubuntu runner"
 
           # Windows testing
           - os: windows-latest
@@ -142,10 +141,14 @@ jobs:
               # Update package database
               pacman -Sy --noconfirm
               # Install basic tools needed for testing
-              pacman -S --noconfirm curl wget git base-devel sudo
+              pacman -S --noconfirm curl wget git base-devel sudo go
               # Create a non-root user for AUR testing
               useradd -m -G wheel testuser
               echo 'testuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+              # Install yay AUR helper
+              git clone https://aur.archlinux.org/yay.git /tmp/yay
+              chown -R testuser: /tmp/yay
+              su - testuser -c "cd /tmp/yay && makepkg -si --noconfirm"
               ;;
             "debian")
               echo "Debian container environment"
@@ -168,11 +171,11 @@ jobs:
             dnf install -y wget git sudo rpm gnupg2
             ;;
             "nixos")
-              echo "NixOS container environment"
-              # Nix should already be available in nixos/nix container
-              nix --version || echo "Nix not available"
-              # Install git for checkout to work
-              nix-env -iA nixpkgs.git
+              echo "Installing Nix on Ubuntu runner"
+              # Install Nix package manager
+              curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+              source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+              nix --version
               ;;
             "windows")
               echo "Windows environment - testing unsupported platform behavior"
@@ -202,6 +205,11 @@ jobs:
             "windows")
               echo "Testing Windows (should show unsupported platform)"
               ./install/install.sh --verbose
+              ;;
+            "nixos")
+              echo "Testing with Nix environment"
+              source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+              ./install/install.sh --no-confirm --verbose
               ;;
             *)
               echo "Testing standard install script execution"

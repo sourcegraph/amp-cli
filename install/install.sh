@@ -1139,13 +1139,26 @@ migrate() {
     say "Removing existing amp installation via $_package_manager..."
     run_cmd $_uninstall_cmd
 
+    # Clear shell hash so command -v is re-evaluated
+    hash -r 2>/dev/null || true
+
     # Verify removal (skip verification in dry-run mode)
     if [ "${AMP_DRY_RUN-}" ]; then
         say "Would remove existing amp installation"
-    elif has_cmd amp; then
-        err "Failed to remove existing amp installation"
     else
-        say "Successfully removed existing amp installation"
+        # Check package manager instead of PATH to avoid shell hash issues
+        local _still_installed=""
+        case $_package_manager in
+            npm)  _still_installed=$(npm list -g --depth=0 2>/dev/null | grep -c "${_npm_package_name}@" || echo "0") ;;
+            pnpm) _still_installed=$(pnpm list -g --depth=0 2>/dev/null | grep -c "${_npm_package_name}@" || echo "0") ;;
+            yarn) _still_installed=$(yarn global list 2>/dev/null | grep -c "${_npm_package_name}@" || echo "0") ;;
+        esac
+
+        if [ "$_still_installed" -ne 0 ]; then
+            err "Failed to remove existing amp installation from $_package_manager"
+        else
+            say "Successfully removed existing amp installation"
+        fi
     fi
 }
 

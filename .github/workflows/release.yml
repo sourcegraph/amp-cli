@@ -59,8 +59,8 @@ jobs:
           # Upload signature files to the release
           gh release upload "$version" *.asc --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
 
   upload-binaries-to-gcs:
     runs-on: ubuntu-latest
@@ -134,8 +134,8 @@ jobs:
             exit 1
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
 
   upload-manifest-to-gcs:
     runs-on: ubuntu-latest
@@ -172,8 +172,8 @@ jobs:
           echo "Uploading manifest.json"
           gcloud storage cp "./repository/binaries/cli/manifest.json" "gs://packages.ampcode.com/binaries/cli/" --project=amp-prod-0
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
 
   build-packages:
     needs: [gpg-sign-binaries, upload-binaries-to-gcs]
@@ -226,8 +226,8 @@ jobs:
           & ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
         shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           CHOCO_PUBLISH_TOKEN: ${{ secrets.CHOCO_PUBLISH_TOKEN }}
 
       - name: Build ${{ matrix.package }} package${{ matrix.arch && format(' ({0})', matrix.arch) || '' }} (Unix)
@@ -237,8 +237,8 @@ jobs:
           ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           DEB_GPG_PRIVATE_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PRIVATE_KEY || '' }}
           DEB_GPG_PUBLIC_KEY: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PUBLIC_KEY || '' }}
           DEB_GPG_PASSWORD: ${{ (matrix.package == 'debian' || matrix.package == 'rpm') && secrets.DEB_GPG_PASSWORD || '' }}
@@ -287,8 +287,8 @@ jobs:
           ${{ matrix.script }} "${{ env.RELEASE_VERSION }}" "${{ matrix.arch || '' }}" "${{ matrix.platform || '' }}"
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           DEB_GPG_PRIVATE_KEY: ${{ secrets.DEB_GPG_PRIVATE_KEY }}
           DEB_GPG_PUBLIC_KEY: ${{ secrets.DEB_GPG_PUBLIC_KEY }}
           DEB_GPG_PASSWORD: ${{ secrets.DEB_GPG_PASSWORD }}
@@ -341,8 +341,8 @@ jobs:
           chmod +x ./scripts/build-repositories.sh
           ./scripts/build-repositories.sh "${{ env.RELEASE_VERSION }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
 
@@ -390,8 +390,8 @@ jobs:
             fi
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
-          GH_TOKEN: ${{ secrets.GH_RELEASE_CLI_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
 
   set-gcs-metadata:
     runs-on: ubuntu-latest

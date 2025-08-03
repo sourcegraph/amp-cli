@@ -3,7 +3,7 @@
 # Script to build Debian repository from .deb packages
 # Usage: ./build-debian-repo.sh <deb-files-directory> <output-directory>
 
-set -e
+set -euo pipefail
 
 DEB_DIR=${1:-"./debs"}
 REPO_DIR=${2:-"repository/debian"}
@@ -74,21 +74,63 @@ Date: $(date -Ru)
 Description: Amp CLI - AI-powered coding assistant
 EOF
 
-# Calculate checksums for Release file
+# Calculate checksums for Release file (format: checksum size path)
 echo "MD5Sum:" >>"$release_file"
-(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -exec md5sum {} \; | sed 's/\.\///') >>"$release_file"
+(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -print0 | \
+    xargs -0 -I {} sh -c 'md5sum "{}" && stat -c%s "{}"' | \
+    awk 'NR%2==1{hash=$1; file=$2} NR%2==0{printf " %s %s %s\n", hash, $1, substr(file,3)}') >>"$release_file"
 
 echo "SHA1:" >>"$release_file"
-(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -exec sha1sum {} \; | sed 's/\.\///') >>"$release_file"
+(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -print0 | \
+    xargs -0 -I {} sh -c 'sha1sum "{}" && stat -c%s "{}"' | \
+    awk 'NR%2==1{hash=$1; file=$2} NR%2==0{printf " %s %s %s\n", hash, $1, substr(file,3)}') >>"$release_file"
 
 echo "SHA256:" >>"$release_file"
-(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -exec sha256sum {} \; | sed 's/\.\///') >>"$release_file"
+(cd "$REPO_DIR/dists/$DIST" && find . -type f \( -name "Packages*" \) -print0 | \
+    xargs -0 -I {} sh -c 'sha256sum "{}" && stat -c%s "{}"' | \
+    awk 'NR%2==1{hash=$1; file=$2} NR%2==0{printf " %s %s %s\n", hash, $1, substr(file,3)}') >>"$release_file"
 
 # Sign Release file if GPG key is available
 if [ -n "$GPG_KEY_ID" ]; then
     echo "Signing Release file with GPG key: $GPG_KEY_ID"
-    gpg --default-key "$GPG_KEY_ID" --armor --detach-sign --output "$REPO_DIR/dists/$DIST/Release.gpg" "$release_file"
-    gpg --default-key "$GPG_KEY_ID" --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file"
+    echo "=== DEBUG: GPG signing configuration ==="
+    echo "GPG_TTY: ${GPG_TTY:-<not set>}"
+    echo "Available secret keys:"
+    gpg --list-secret-keys --keyid-format LONG
+    echo "======================================="
+    
+    # Sign with explicit batch and pinentry-mode options using secure passphrase handling
+    echo "Creating Release.gpg signature..."
+    if [ -n "${GPG_PASSPHRASE:-}" ]; then
+        # Use secure passphrase file method
+        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
+        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
+        chmod 600 "$PASSPHRASE_FILE"
+        
+        gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --default-key "$GPG_KEY_ID" --armor --detach-sign --output "$REPO_DIR/dists/$DIST/Release.gpg" "$release_file" 2>/dev/null
+        
+        rm -f "$PASSPHRASE_FILE"
+    else
+        gpg --batch --yes --no-tty --pinentry-mode loopback --default-key "$GPG_KEY_ID" --armor --detach-sign --output "$REPO_DIR/dists/$DIST/Release.gpg" "$release_file" 2>/dev/null
+    fi
+    
+    echo "Creating InRelease signature..."
+    if [ -n "${GPG_PASSPHRASE:-}" ]; then
+        # Use secure passphrase file method
+        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
+        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
+        chmod 600 "$PASSPHRASE_FILE"
+        
+        gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --default-key "$GPG_KEY_ID" --digest-algo SHA256 --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file" 2>/dev/null
+        
+        rm -f "$PASSPHRASE_FILE"
+    else
+        gpg --batch --yes --no-tty --pinentry-mode loopback --default-key "$GPG_KEY_ID" --digest-algo SHA256 --clear-sign --output "$REPO_DIR/dists/$DIST/InRelease" "$release_file" 2>/dev/null
+    fi
+    
+    echo "=== DEBUG: Signature files created ==="
+    ls -la "$REPO_DIR/dists/$DIST/"*Release*
+    echo "======================================="
 else
     echo "Warning: GPG_KEY_ID not set, repository will not be signed"
 fi

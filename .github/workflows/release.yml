@@ -395,6 +395,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_RELEASE_WORKFLOW_TOKEN }}
           GPG_PRIVATE_KEY: ${{ secrets.DEB_GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.DEB_GPG_PASSWORD }}
           GPG_KEY_ID: ${{ secrets.DEB_GPG_KEY_ID }}
 
   upload-deb-and-rpm-binaries-to-gcs:

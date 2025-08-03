@@ -6,10 +6,81 @@ VERSION="${VERSION#v}"
 
 echo "Building package repositories for version $VERSION"
 
+# Debug: Show environment
+echo "=== DEBUG: Environment Information ==="
+echo "USER: ${USER:-<not set>}"
+echo "HOME: ${HOME:-<not set>}"
+echo "GPG_TTY: ${GPG_TTY:-<not set>}"
+echo "GNUPG configuration directory: ${GNUPGHOME:-$HOME/.gnupg}"
+echo "PWD: $(pwd)"
+echo "GPG_KEY_ID provided: ${GPG_KEY_ID:-<not provided>}"
+echo "GPG_PRIVATE_KEY provided: ${GPG_PRIVATE_KEY:+[REDACTED]}"
+echo "GPG_PASSPHRASE provided: ${GPG_PASSPHRASE:+[REDACTED]}"
+echo "======================================="
+
+# Setup GPG with isolated GNUPGHOME for CI
+echo "=== DEBUG: Configuring GPG for non-interactive mode ==="
+export GNUPGHOME="${RUNNER_TEMP:-/tmp}/gnupg"
+mkdir -p "$GNUPGHOME"
+chmod 700 "$GNUPGHOME"
+echo "Using GNUPGHOME: $GNUPGHOME"
+
+# Only set GPG_TTY if we actually have a TTY
+if tty -s 2>/dev/null; then
+    export GPG_TTY=$(tty)
+    echo "Setting GPG_TTY to: $GPG_TTY"
+else
+    echo "No TTY available, using loopback pinentry only"
+fi
+
+# Create GPG agent configuration for non-interactive mode
+cat > "$GNUPGHOME/gpg-agent.conf" << EOF
+allow-loopback-pinentry
+EOF
+
+cat > "$GNUPGHOME/gpg.conf" << EOF
+use-agent
+pinentry-mode loopback
+batch
+yes
+no-tty
+EOF
+
+echo "GPG configuration files created in $GNUPGHOME"
+echo "Contents of gpg.conf:"
+cat "$GNUPGHOME/gpg.conf"
+echo "Contents of gpg-agent.conf:"
+cat "$GNUPGHOME/gpg-agent.conf"
+
 # Setup GPG
 if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
-    echo "$GPG_PRIVATE_KEY" | gpg --import --batch
+    echo "=== DEBUG: Importing GPG private key ==="
+    echo "GPG private key will be imported securely"
+    
+    # Import with explicit batch and pinentry-mode options
+    # Use secure method that doesn't expose passphrase in command line
+    if [ -n "${GPG_PASSPHRASE:-}" ]; then
+        echo "Using provided GPG passphrase for key import"
+        # Create temporary passphrase file with secure permissions
+        PASSPHRASE_FILE="$GNUPGHOME/passphrase.tmp"
+        echo "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
+        chmod 600 "$PASSPHRASE_FILE"
+        
+        # Import using passphrase file
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --passphrase-file "$PASSPHRASE_FILE" --import 2>/dev/null
+        
+        # Securely remove passphrase file
+        rm -f "$PASSPHRASE_FILE"
+    else
+        echo "No GPG passphrase provided, assuming unprotected key"
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --no-tty --pinentry-mode loopback --import 2>/dev/null
+    fi
+    
+    echo "=== DEBUG: Listing available keys after import ==="
+    gpg --list-secret-keys --keyid-format LONG
+    
     export GPG_KEY_ID="${GPG_KEY_ID}"
+    echo "Using GPG_KEY_ID: $GPG_KEY_ID"
 else
     echo "GPG_PRIVATE_KEY secret not set, skipping GPG setup"
     export GPG_KEY_ID=""

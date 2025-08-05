@@ -1,5 +1,5 @@
 Package: amp
-Version: 0.0.1754367769-1
+Version: 0.0.1754381202-1
 Architecture: amd64
 Maintainer: Sourcegraph <amp-devs@sourcegraph.com>
 Depends: ripgrep

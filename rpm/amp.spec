@@ -1,5 +1,5 @@
 Name:           amp
-Version:        0.0.1755533167
+Version:        0.0.1755547525
 Release:        1%{?dist}
 Summary:        An agentic coding tool, in research preview from Sourcegraph
 

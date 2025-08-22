@@ -4,27 +4,27 @@
 class Amp < Formula
   desc 'Amp CLI - An agentic coding tool, in research preview from Sourcegraph'
   homepage 'https://ampcode.com'
-  url 'https://packages.ampcode.com/binaries/cli/v0.0.1755878743/amp-darwin-arm64.zip'
-  sha256 '6d8f6dd1e85b925a41ede3e03189ae9305b783d5053655228ed337e557acb3af'
-  version '0.0.1755878743'
+  url 'https://packages.ampcode.com/binaries/cli/v0.0.1755893117/amp-darwin-arm64.zip'
+  sha256 'ddaa1f915a7cce64d9bfb891a070f702fd5c42033fda4ab730553a6877568e9b'
+  version '0.0.1755893117'
 
   on_macos do
     if Hardware::CPU.arm?
-      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755878743/amp-darwin-arm64.zip'
-      sha256 '6d8f6dd1e85b925a41ede3e03189ae9305b783d5053655228ed337e557acb3af'
+      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755893117/amp-darwin-arm64.zip'
+      sha256 'ddaa1f915a7cce64d9bfb891a070f702fd5c42033fda4ab730553a6877568e9b'
     else
-      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755878743/amp-darwin-x64.zip'
-      sha256 '164dcaad81713bffd264e2b1a8af672f94eff7f456204516e397503c49fac326'
+      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755893117/amp-darwin-x64.zip'
+      sha256 '118e0a062eaef3adf10806a8ed05eb8dd83f1d0a81289fdb71f7f60d1a3e9b83'
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755878743/amp-linux-arm64'
-      sha256 '541dc1e753a81fc5049f0c171608839f39f87ea3eb8c3ac491dd0ac331bbf3c9'
+      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755893117/amp-linux-arm64'
+      sha256 'cace184f81b9abf2093b5112cefe8ec495ad4b33dca28fac70a6b08cbc54aebe'
     else
-      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755878743/amp-linux-x64'
-      sha256 'bf605623e816ef9e2dc6cd9657f3820996712e4443e810f83e52be8754704115'
+      url 'https://packages.ampcode.com/binaries/cli/v0.0.1755893117/amp-linux-x64'
+      sha256 'ab8adce7fa2e62076f876c9f98a81fc78884c98d1bcff569a2fcc794d8138bf6'
     end
   end
 

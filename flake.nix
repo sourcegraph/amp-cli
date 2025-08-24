@@ -21,14 +21,14 @@
 
         arch = archMap.${system} or (throw "Unsupported system: ${system}");
 
-        version = "0.0.1756022739";
+        version = "0.0.1756037214";
 
         # These will be updated with actual SHA256 hashes by the workflow
         shaMap = {
-          "linux-x64" = "998cba2b188e1d3296e82d374ffb46a49994bdc94635c9d94cae28bd451dd73e";
-          "linux-arm64" = "146fd0f961eb2e769ee830298869aa7ad44ff596f2143d0158a04ac448a76a75";
-          "darwin-x64" = "25e1459a960ee91731337bc6bd3c16dbb053fbdfef6656c812f0ea0dca038798";
-          "darwin-arm64" = "d4076e7ad151b6cedc1009ac208095a6c586b33fef61927ed3ce47eb945f7acf";
+          "linux-x64" = "0ef540fb4f87ee226a1fedf44e5042cd9c104b876b2f9631031ab554d69df335";
+          "linux-arm64" = "6af8599f695f6cd3dc931df62b51ffd3a93e3699f254f30489892fb92c7c80b6";
+          "darwin-x64" = "105dd7d2ec54397f13fe69d5b24ccc799ab243f81efa745ff0608bb81cbb816b";
+          "darwin-arm64" = "3b8205b7cce25d1369c7a561aa7f44eea4305e00f170dd11e4a3aa06f2f9f2c8";
         };
 
       in

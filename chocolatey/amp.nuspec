@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>amp</id>
-    <version>0.0.1756167489</version>
+    <version>0.0.1756181151</version>
     <packageSourceUrl>https://github.com/sourcegraph/amp-cli/tree/main/chocolatey</packageSourceUrl>
     <owners>Sourcegraph</owners>
     <title>Amp CLI</title>

@@ -1,9 +1,9 @@
 Package: amp
-Version: 0.0.1756497920-1
-Architecture: arm64
+Version: 0.0.1756513030-1
+Architecture: amd64
 Maintainer: Sourcegraph <amp-devs@sourcegraph.com>
 Depends: ripgrep
-Installed-Size: 102184
+Installed-Size: 108720
 Section: devel
 Priority: optional
 Homepage: https://ampcode.com
